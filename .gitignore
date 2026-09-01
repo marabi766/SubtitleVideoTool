@@ -43,3 +43,8 @@ cookies*.txt
 *~
 Thumbs.db
 desktop.ini
+
+# .NET build output
+[Bb]in/
+[Oo]bj/
+*.user

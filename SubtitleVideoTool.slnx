@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/SubtitleVideoTool.App/SubtitleVideoTool.App.csproj" />
+    <Project Path="src/SubtitleVideoTool.Core/SubtitleVideoTool.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/SubtitleVideoTool.Core.Tests/SubtitleVideoTool.Core.Tests.csproj" />
+  </Folder>
+</Solution>
