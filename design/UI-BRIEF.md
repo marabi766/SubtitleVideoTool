@@ -82,7 +82,7 @@ target.
 | YouTube link | text | accepts pasted links in many shapes |
 | Output folder | path + Browse | defaults to the user's Downloads folder |
 | Video quality | dropdown | populated from the video itself — see below |
-| Subtitle language | dropdown | populated from the video itself — see below |
+| English subtitles | checkbox + availability line | English only — see below |
 | Cookie source | dropdown | see below |
 | Sign in to YouTube | button | enabled only for "Sign in with browser" |
 | Cookie file | path + Browse | enabled only for "cookies.txt file" |
@@ -100,9 +100,9 @@ contents.
 ### Detecting what the video actually offers
 
 When a link is pasted, the app asks yt-dlp what that specific video has, and
-fills the quality and subtitle dropdowns from the answer instead of offering a
-fixed list. Quality options the video does not have must not be offered, and
-subtitle languages are shown by full name — "English", not "en".
+fills the quality list from the answer instead of offering a fixed list. Quality
+options the video does not have must not be offered. The same answer says
+whether an English subtitle exists and what kind it is.
 
 **This is not instant.** The probe is a network round trip that measured
 **6–8 seconds** on a real video. It can also fail, for the same reasons a
@@ -113,25 +113,33 @@ the user changes the cookie source.
 Measured on a real video (Rick Astley, "Never Gonna Give You Up"), so the design
 is sized against real numbers rather than a guess:
 
-**Subtitles — two very different groups.**
+**Subtitles — English only. There is no language picker.**
 
-- **Human-written subtitles: 5.** `en`, `de-DE`, `ja`, `pt-BR`, `es-419` —
-  i.e. English, German (Germany), Japanese, Portuguese (Brazil), Spanish
-  (Latin America).
-- **Auto-generated subtitles: 160.** Almost all of these are machine
-  translations into every language YouTube supports.
+The app fetches English subtitles and nothing else, so the interface does not
+ask which language. What it does need to say is *what kind of English subtitle
+this video has*, because the quality difference is large and the user should
+know before downloading. There are four outcomes, and the probe distinguishes
+them reliably (verified against real output, see the note below):
 
-A flat dropdown of 165 entries is unusable, but the auto list **cannot simply be
-hidden**: Persian was not among the five human-written tracks and existed only
-as an auto-translation, and Persian is a primary use case for this app. So the
-design needs a list that leads with the handful of real subtitles, clearly marks
-auto-generated ones, and still lets someone reach and find one of 160 languages —
-type-to-search, grouping, or both.
+1. **Human-written English** — the best case. On the video measured, English was
+   one of five human-written tracks.
+2. **Auto-generated English** — speech recognition on English audio. Usable,
+   with mistakes.
+3. **Auto-translated English** — machine translation of a non-English video.
+   Roughest, but often the only option on foreign-language content.
+4. **None** — no English subtitle exists at all. The download should still be
+   allowed to proceed with video only, not blocked.
 
-**Open question for the design:** should this be single-select or multi-select?
-Today the app downloads several languages at once (Persian and English by
-default). Multi-select is more useful; a plain dropdown is simpler. Please make
-a recommendation.
+So the control is a single checkbox — "Download English subtitles" — plus one
+line of text stating which of those four applies to the pasted video. The design
+should give those four outcomes a clear visual treatment, particularly the
+difference between case 1 and cases 2–3, and case 4 must not read as an error.
+
+*Implementation note, not a design constraint:* in the probe output, case 1 is
+an `en` key under `subtitles`; cases 2 and 3 are an `en` key under
+`automatic_captions`, told apart by whether the track URL carries a `tlang=`
+parameter — present means it was machine-translated from another language.
+`design/sample-probe.json` contains a real example of each.
 
 **Quality — 8 real options on that video**, each of which the app should label
 plainly: 2160p (4K), 1440p, 1080p, 720p, 480p, 360p, 240p, 144p, plus a
@@ -153,10 +161,11 @@ poorly. Each deserves a considered treatment.
 2. **Idle, tools broken or missing** — a bundled `.exe` exists but will not
    start. The user must be told which one and what to do.
 3. **Inspecting the link** — a link has been pasted and the app is asking
-   YouTube what the video offers. Takes 6–8 seconds. The quality and subtitle
-   dropdowns have nothing in them yet, and Download cannot be pressed.
-4. **Link inspected** — the video's title, duration and thumbnail are known,
-   and the two dropdowns are filled with what this video actually has.
+   YouTube what the video offers. Takes 6–8 seconds. The quality list is empty,
+   the English-subtitle line is unknown, and Download cannot be pressed.
+4. **Link inspected** — the video's title, duration and thumbnail are known, the
+   quality list holds what this video actually has, and the English-subtitle
+   line says which of the four cases applies.
 5. **Link inspection failed** — same causes as a failed download. The user must
    be able to fix the cause (usually by choosing a cookie source) and re-run the
    inspection without retyping the link.
@@ -202,9 +211,9 @@ Artboards for:
 - Each of the three tabs.
 - The download tab in states 3, 4, 5, 7, 8, 9, 10 and 14 above — this is where
   the design earns its keep.
-- The subtitle language list, open, showing how 5 human-written tracks and 160
-  auto-generated ones coexist without burying either.
 - The quality list, open, with the 8 real options.
+- The English-subtitle line in all four of its outcomes: human-written,
+  auto-generated, auto-translated, and none available.
 - The failure presentation, using the bot-check error as the worked example.
 - The tools-missing state.
 
