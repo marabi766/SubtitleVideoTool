@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<style>
+  body { margin:0; background:#E4E4E4; }
+  a { color:#005FB8; text-decoration:none; }
+  a:hover { color:#1A6FC4; text-decoration:underline; }
+</style>
+</helmet>
+
+<div style="font-family:'Segoe UI Variable Text','Segoe UI',system-ui,sans-serif;background:#E4E4E4;padding:56px 64px 96px;display:flex;flex-direction:column;gap:72px;color:#1B1B1B">
+
+  <div style="display:flex;flex-direction:column;gap:6px;max-width:860px">
+    <div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#6B6B6B;font-weight:600">Redesign · WPF / WinUI Fluent</div>
+    <div style="font-size:40px;line-height:48px;font-weight:600;letter-spacing:-0.02em">Subtitle &amp; Video Compressor</div>
+    <div style="font-size:16px;line-height:24px;color:#5E5E5E;text-wrap:pretty">One window, 960×720, resizable from 880×640. Three jobs share one queue, one progress region and one log. Every artboard below is buildable with stock WPF controls and Fluent styling.</div>
+  </div>
+
+  <!-- ============ SHELL ============ -->
+  <div style="display:flex;flex-direction:column;gap:20px">
+    <div style="display:flex;align-items:baseline;gap:12px">
+      <div style="font-size:24px;line-height:32px;font-weight:600">1 · Shell</div>
+      <div style="font-size:14px;color:#5E5E5E">Header, tab strip, content card, then the persistent footer: tool status, activity region, log.</div>
+    </div>
+
+    <div style="display:flex;gap:40px;flex-wrap:wrap">
+
+      <!-- LIGHT BURN -->
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:13px;font-weight:600;color:#3A3A3A">Burn Subtitles — Light · idle, tools ready</div>
+        <div style="width:960px;background:#F3F3F3;border:1px solid #C4C4C4;border-radius:8px;box-shadow:0 14px 36px rgba(0,0,0,.16);overflow:hidden">
+          <div style="height:32px;display:flex;align-items:center;background:#F3F3F3;border-bottom:1px solid #EAEAEA">
+            <div style="display:flex;align-items:center;gap:8px;padding-left:12px;flex:1">
+              <img src="app-icon.png" alt="" style="width:16px;height:16px;display:block">
+              <div style="font-size:12px;color:#1B1B1B">Subtitle &amp; Video Compressor</div>
+            </div>
+            <div style="display:flex">
+              <div style="width:46px;height:32px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#1B1B1B">&#9472;</div>
+              <div style="width:46px;height:32px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#1B1B1B">&#9633;</div>
+              <div style="width:46px;height:32px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#1B1B1B">&#10005;</div>
+            </div>
+          </div>
+
+          <div style="padding:20px 24px 0;display:flex;flex-direction:column;gap:4px">
+            <div style="font-size:28px;line-height:36px;font-weight:600;letter-spacing:-0.01em">Subtitle &amp; Video Compressor</div>
+            <div style="font-size:14px;line-height:20px;color:#5E5E5E">Burn subtitles in permanently, or shrink a video to a size you choose.</div>
+          </div>
+
+          <div style="padding:16px 24px 0;display:flex;gap:24px;border-bottom:1px solid #E5E5E5">
+            <div style="font-size:14px;line-height:20px;font-weight:600;color:#1B1B1B;padding-bottom:8px;box-shadow:inset 0 -3px 0 #005FB8">Burn Subtitles</div>
+            <div style="font-size:14px;line-height:20px;color:#5E5E5E;padding-bottom:8px">Compress</div>
+            <div style="font-size:14px;line-height:20px;color:#5E5E5E;padding-bottom:8px">Download from YouTube</div>
+          </div>
+
+          <div style="padding:20px 24px;display:flex;flex-direction:column;gap:16px">
+            <div style="background:#FFFFFF;border:1px solid #E5E5E5;border-radius:8px;padding:20px;display:grid;grid-template-columns:150px 1fr;gap:12px 16px;align-items:center">
+              <div style="font-size:14px;color:#1B1B1B">Video file</div>
+              <div style="display:flex;gap:8px">
+                <div style="flex:1;height:32px;border:1px solid #E0E0E0;border-bottom-color:#C4C4C4;border-radius:4px;background:#FDFDFD;display:flex;align-items:center;padding:0 10px;font-size:14px;color:#1B1B1B">C:\Users\Mohammad\Videos\interview-cut.mp4</div>
+                <div style="height:32px;padding:0 16px;border:1px solid #E0E0E0;border-bottom-color:#C4C4C4;border-radius:4px;background:#FBFBFB;display:flex;align-items:center;font-size:14px">Browse…</div>
+              </div>
+              <div style="font-size:14px">Subtitle file</div>
+              <div style="display:flex;gap:8px">
+                <div style="flex:1;height:32px;border:1px solid #E0E0E0;border-bottom-color:#C4C4C4;border-radius:4px;background:#FDFDFD;display:flex;align-items:center;padding:0 10px;font-size:14px;color:#8D8D8D">Choose an .srt file</div>
+                <div style="height:32px;padding:0 16px;border:1px solid #E0E0E0;border-bottom-color:#C4C4C4;border-radius:4px;background:#FBFBFB;display:flex;align-items:center;font-size:14px">Browse…</div>
+              </div>
+              <div style="font-size:14px">Output file</div>
+              <div style="display:flex;gap:8px">
+                <div style="flex:1;height:32px;border:1px solid #E0E0E0;border-bottom-color:#C4C4C4;border-radius:4px;background:#FDFDFD;display:flex;align-items:center;padding:0 10px;font-size:14px;color:#1B1B1B">C:\Users\Mohammad\Videos\interview-cut-subbed.mp4</div>
+                <div style="height:32px;padding:0 16px;border:1px solid #E0E0E0;border-bottom-color:#C4C4C4;border-radius:4px;background:#FBFBFB;display:flex;align-items:center;font-size:14px">Browse…</div>
+              </div>
+
+              <div style="grid-column:1 / -1;height:1px;background:#EDEDED;margin:4px 0"></div>
+
+              <div style="font-size:14px">Subtitle style</div>
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                <div style="width:200px;height:32px;border:1px solid #E0E0E0;border-bottom-color:#C4C4C4;border-radius:4px;background:#FDFDFD;display:flex;align-items:center;padding:0 10px;font-size:14px">Segoe UI</div>
+                <div style="height:32px;padding:0 12px;border:1px solid #E0E0E0;border-bottom-color:#C4C4C4;border-radius:4px;background:#FBFBFB;display:flex;align-items:center;font-size:14px">Pick font…</div>
+                <div style="display:flex;align-items:center;gap:6px">
+                  <div style="width:64px;height:32px;border:1px solid #E0E0E0;border-bottom-color:#C4C4C4;border-radius:4px;background:#FDFDFD;display:flex;align-items:center;padding:0 8px;font-size:14px">18</div>
+                  <div style="font-size:14px;color:#5E5E5E">pt</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;height:32px;padding:0 10px 0 6px;border:1px solid #E0E0E0;border-bottom-color:#C4C4C4;border-radius:4px;background:#FBFBFB">
+                  <div style="width:20px;height:20px;border-radius:3px;background:#FFFFFF;border:1px solid #C4C4C4"></div>
+                  <div style="font-size:14px">Text</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;height:32px;padding:0 10px 0 6px;border:1px solid #E0E0E0;border-bottom-color:#C4C4C4;border-radius:4px;background:#FBFBFB">
+                  <div style="width:20px;height:20px;border-radius:3px;background:#000000"></div>
+                  <div style="font-size:14px">Background</div>
+                </div>
+              </div>
+
+              <div style="font-size:14px">Also compress</div>
+              <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <div style="width:20px;height:20px;border-radius:4px;background:#005FB8;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px">&#10003;</div>
+                  <div style="font-size:14px">Shrink the result to a size limit</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px">
+                  <div style="width:88px;height:32px;border:1px solid #E0E0E0;border-bottom-color:#C4C4C4;border-radius:4px;background:#FDFDFD;display:flex;align-items:center;padding:0 8px;font-size:14px">120</div>
+                  <div style="font-size:14px;color:#5E5E5E">MB</div>
+                </div>
+              </div>
+              <div></div>
+              <div style="font-size:12px;line-height:16px;color:#5E5E5E">Resolution is lowered only if the size target cannot be met at the current one.</div>
+            </div>
+
+            <div style="display:flex;justify-content:flex-end">
+              <div style="height:34px;padding:0 20px;border-radius:4px;background:#005FB8;color:#FFFFFF;font-size:14px;font-weight:600;display:flex;align-items:center">Start burning</div>
+            </div>
+          </div>
+
+          <div style="border-top:1px solid #E5E5E5;background:#FAFAFA;padding:12px 24px 16px;display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="width:8px;height:8px;border-radius:50%;background:#0F7B0F"></div>
+              <div style="font-size:12px;line-height:16px;color:#5E5E5E">All tools ready — ffmpeg, ffprobe, yt-dlp, deno</div>
+              <div style="flex:1"></div>
+              <div style="height:28px;padding:0 12px;border:1px solid #E0E0E0;border-bottom-color:#C4C4C4;border-radius:4px;background:#FBFBFB;display:flex;align-items:center;font-size:12px">Locate FFmpeg…</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px">
+              <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+                <div style="font-size:14px;line-height:20px;color:#5E5E5E">Nothing running. Choose your files and press Start.</div>
+                <div style="height:4px;border-radius:2px;background:#E5E5E5"></div>
+              </div>
+              <div style="height:32px;padding:0 16px;border:1px solid #EAEAEA;border-radius:4px;background:#F5F5F5;display:flex;align-items:center;font-size:14px;color:#A0A0A0">Cancel</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#5E5E5E">
+              <div style="font-size:9px">&#9654;</div>
+              <div>Show log</div>
+              <div style="color:#8D8D8D">— 3 lines</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DARK BURN -->
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:13px;font-weight:600;color:#3A3A3A">Burn Subtitles — Dark · log expanded</div>
+        <div style="width:960px;background:#1F1F1F;border:1px solid #111111;border-radius:8px;box-shadow:0 14px 36px rgba(0,0,0,.28);overflow:hidden;color:#FFFFFF">
+          <div style="height:32px;display:flex;align-items:center;background:#1F1F1F;border-bottom:1px solid #2A2A2A">
+            <div style="display:flex;align-items:center;gap:8px;padding-left:12px;flex:1">
+              <img src="app-icon.png" alt="" style="width:16px;height:16px;display:block">
+              <div style="font-size:12px;color:#FFFFFF">Subtitle &amp; Video Compressor</div>
+            </div>
+            <div style="display:flex">
+              <div style="width:46px;height:32px;display:flex;align-items:center;justify-content:center;font-size:10px">&#9472;</div>
+              <div style="width:46px;height:32px;display:flex;align-items:center;justify-content:center;font-size:10px">&#9633;</div>
+              <div style="width:46px;height:32px;display:flex;align-items:center;justify-content:center;font-size:11px">&#10005;</div>
+            </div>
+          </div>
+
+          <div style="padding:20px 24px 0;display:flex;flex-direction:column;gap:4px">
+            <div style="font-size:28px;line-height:36px;font-weight:600;letter-spacing:-0.01em">Subtitle &amp; Video Compressor</div>
+            <div style="font-size:14px;line-height:20px;color:#CFCFCF">Burn subtitles in permanently, or shrink a video to a size you choose.</div>
+          </div>
+
+          <div style="padding:16px 24px 0;display:flex;gap:24px;border-bottom:1px solid #383838">
+            <div style="font-size:14px;line-height:20px;font-weight:600;padding-bottom:8px;box-shadow:inset 0 -3px 0 #60CDFF">Burn Subtitles</div>
+            <div style="font-size:14px;line-height:20px;color:#CFCFCF;padding-bottom:8px">Compress</div>
+            <div style="font-size:14px;line-height:20px;color:#CFCFCF;padding-bottom:8px">Download from YouTube</div>
+          </div>
+
+          <div style="padding:20px 24px;display:flex;flex-direction:column;gap:16px">
+            <div style="background:#2B2B2B;border:1px solid #383838;border-radius:8px;padding:20px;display:grid;grid-template-columns:150px 1fr;gap:12px 16px;align-items:center">
+              <div style="font-size:14px">Video file</div>
+              <div style="display:flex;gap:8px">
+                <div style="flex:1;height:32px;border:1px solid #3D3D3D;border-bottom-color:#585858;border-radius:4px;background:#333333;display:flex;align-items:center;padding:0 10px;font-size:14px">C:\Users\Mohammad\Videos\interview-cut.mp4</div>
+                <div style="height:32px;padding:0 16px;border:1px solid #3D3D3D;border-bottom-color:#4A4A4A;border-radius:4px;background:#333333;display:flex;align-items:center;font-size:14px">Browse…</div>
+              </div>
+              <div style="font-size:14px">Subtitle file</div>
+              <div style="display:flex;gap:8px">
+                <div style="flex:1;height:32px;border:1px solid #3D3D3D;border-bottom-color:#585858;border-radius:4px;background:#333333;display:flex;align-items:center;padding:0 10px;font-size:14px;color:#969696">Choose an .srt file</div>
+                <div style="height:32px;padding:0 16px;border:1px solid #3D3D3D;border-bottom-color:#4A4A4A;border-radius:4px;background:#333333;display:flex;align-items:center;font-size:14px">Browse…</div>
+              </div>
+              <div style="font-size:14px">Output file</div>
+              <div style="display:flex;gap:8px">
+                <div style="flex:1;height:32px;border:1px solid #3D3D3D;border-bottom-color:#585858;border-radius:4px;background:#333333;display:flex;align-items:center;padding:0 10px;font-size:14px">C:\Users\Mohammad\Videos\interview-cut-subbed.mp4</div>
+                <div style="height:32px;padding:0 16px;border:1px solid #3D3D3D;border-bottom-color:#4A4A4A;border-radius:4px;background:#333333;display:flex;align-items:center;font-size:14px">Browse…</div>
+              </div>
+              <div style="grid-column:1 / -1;height:1px;background:#383838;margin:4px 0"></div>
+              <div style="font-size:14px">Subtitle style</div>
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                <div style="width:200px;height:32px;border:1px solid #3D3D3D;border-bottom-color:#585858;border-radius:4px;background:#333333;display:flex;align-items:center;padding:0 10px;font-size:14px">Segoe UI</div>
+                <div style="height:32px;padding:0 12px;border:1px solid #3D3D3D;border-radius:4px;background:#333333;display:flex;align-items:center;font-size:14px">Pick font…</div>
+                <div style="display:flex;align-items:center;gap:6px">
+                  <div style="width:64px;height:32px;border:1px solid #3D3D3D;border-bottom-color:#585858;border-radius:4px;background:#333333;display:flex;align-items:center;padding:0 8px;font-size:14px">18</div>
+                  <div style="font-size:14px;color:#CFCFCF">pt</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;height:32px;padding:0 10px 0 6px;border:1px solid #3D3D3D;border-radius:4px;background:#333333">
+                  <div style="width:20px;height:20px;border-radius:3px;background:#FFFFFF"></div>
+                  <div style="font-size:14px">Text</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;height:32px;padding:0 10px 0 6px;border:1px solid #3D3D3D;border-radius:4px;background:#333333">
+                  <div style="width:20px;height:20px;border-radius:3px;background:#000000;border:1px solid #4A4A4A"></div>
+                  <div style="font-size:14px">Background</div>
+                </div>
+              </div>
+              <div style="font-size:14px">Also compress</div>
+              <div style="display:flex;align-items:center;gap:12px">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <div style="width:20px;height:20px;border-radius:4px;border:1px solid #8A8A8A;background:#2B2B2B"></div>
+                  <div style="font-size:14px">Shrink the result to a size limit</div>
+                </div>
+                <div style="font-size:12px;color:#969696">Size limit appears when this is on</div>
+              </div>
+            </div>
+
+            <div style="display:flex;justify-content:flex-end">
+              <div style="height:34px;padding:0 20px;border-radius:4px;background:#60CDFF;color:#000000;font-size:14px;font-weight:600;display:flex;align-items:center">Start burning</div>
+            </div>
+          </div>
+
+          <div style="border-top:1px solid #383838;background:#1A1A1A;padding:12px 24px 16px;display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="width:8px;height:8px;border-radius:50%;background:#6CCB5F"></div>
+              <div style="font-size:12px;line-height:16px;color:#CFCFCF">All tools ready — ffmpeg, ffprobe, yt-dlp, deno</div>
+              <div style="flex:1"></div>
+              <div style="height:28px;padding:0 12px;border:1px solid #3D3D3D;border-radius:4px;background:#2B2B2B;display:flex;align-items:center;font-size:12px">Locate FFmpeg…</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px">
+              <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+                <div style="font-size:14px;line-height:20px;color:#CFCFCF">Nothing running. Choose your files and press Start.</div>
+                <div style="height:4px;border-radius:2px;background:#383838"></div>
+              </div>
+              <div style="height:32px;padding:0 16px;border:1px solid #333333;border-radius:4px;background:#282828;display:flex;align-items:center;font-size:14px;color:#6E6E6E">Cancel</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#CFCFCF">
+                <div style="font-size:9px">&#9660;</div>
+                <div>Hide log</div>
+              </div>
+              <div style="height:96px;background:#141414;border:1px solid #333333;border-radius:6px;padding:8px 10px;font-family:'Cascadia Mono',Consolas,monospace;font-size:12px;line-height:18px;color:#B8B8B8;display:flex;flex-direction:column">
+                <div>[01:24:58] Application ready</div>
+                <div>[01:24:58] ffmpeg 6.1.1 · ffprobe 6.1.1 · yt-dlp 2024.08.06 · deno 1.45</div>
+                <div>[01:25:02] Waiting for input</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ TABS ============ -->
+  <div style="display:flex;flex-direction:column;gap:20px">
+    <div style="display:flex;align-items:baseline;gap:12px">
+      <div style="font-size:24px;line-height:32px;font-weight:600">2 · The other two tabs</div>
+      <div style="font-size:14px;color:#5E5E5E">Content area only — shell chrome is identical.</div>
+    </div>
+
+    <div style="display:flex;gap:40px;flex-wrap:wrap">
+      <!-- COMPRESS -->
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:13px;font-weight:600;color:#3A3A3A">Compress</div>
+        <div style="width:912px;background:#F3F3F3;border:1px solid #C4C4C4;border-radius:8px;overflow:hidden;box-shadow:0 10px 28px rgba(0,0,0,.12)">
+          <div style="padding:16px 24px 0;display:flex;gap:24px;border-bottom:1px solid #E5E5E5">
+            <div style="font-size:14px;color:#5E5E5E;padding-bottom:8px">Burn Subtitles</div>
+            <div style="font-size:14px;font-weight:600;padding-bottom:8px;box-shadow:inset 0 -3px 0 #005FB8">Compress</div>
+            <div style="font-size:14px;color:#5E5E5E;padding-bottom:8px">Download from YouTube</div>
+          </div>
+          <div style="padding:20px 24px;display:flex;flex-direction:column;gap:16px">
+            <div style="background:#FFFFFF;border:1px solid #E5E5E5;border-radius:8px;padding:20px;display:grid;grid-template-columns:150px 1fr;gap:12px 16px;align-items:center">
+              <div style="font-size:14px">Video file</div>
+              <div style="display:flex;gap:8px">
+                <div style="flex:1;height:32px;border:1px solid #E0E0E0;border-bottom-color:#C4C4C4;border-radius:4px;background:#FDFDFD;display:flex;align-items:center;padding:0 10px;font-size:14px">C:\Users\Mohammad\Videos\lecture-full.mp4</div>
+                <div style="height:32px;padding:0 16px;border:1px solid #E0E0E0;border-bottom-color:#C4C4C4;border-radius:4px;background:#FBFBFB;display:flex;align-items:center;font-size:14px">Browse…</div>
+              </div>
+              <div style="font-size:14px">Output file</div>
+              <div style="display:flex;gap:8px">
+                <div style="flex:1;height:32px;border:1px solid #E0E0E0;border-bottom-color:#C4C4C4;border-radius:4px;background:#FDFDFD;display:flex;align-items:center;padding:0 10px;font-size:14px">C:\Users\Mohammad\Videos\lecture-full-small.mp4</div>
+                <div style="height:32px;padding:0 16px;border:1px solid #E0E0E0;border-bottom-color:#C4C4C4;border-radius:4px;background:#FBFBFB;display:flex;align-items:center;font-size:14px">Browse…</div>
+              </div>
+              <div style="font-size:14px">Size limit</div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <div style="width:110px;height:32px;border:1px solid #E0E0E0;border-bottom-color:#C4C4C4;border-radius:4px;background:#FDFDFD;display:flex;align-items:center;justify-content:space-between;padding:0 6px 0 10px;font-size:14px">
+                  <div>120</div>
+                  <div style="display:flex;flex-direction:column;gap:1px;color:#5E5E5E;font-size:7px;line-height:7px">
+                    <div>&#9650;</div><div>&#9660;</div>
+                  </div>
+                </div>
+                <div style="font-size:14px;color:#5E5E5E">MB</div>
+                <div style="font-size:12px;color:#8D8D8D;padding-left:8px">Source is 512 MB · 24 min</div>
+              </div>
+              <div></div>
+              <div style="display:flex;gap:10px;align-items:flex-start;background:#EFF6FC;border:1px solid #CCE2F5;border-radius:6px;padding:10px 12px">
+                <div style="width:16px;height:16px;border-radius:50%;background:#005FB8;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none;margin-top:1px">i</div>
+                <div style="font-size:12px;line-height:18px;color:#1B1B1B;text-wrap:pretty">The bitrate is calculated from the video's length. If 120 MB can't be reached without a visible drop in quality, you'll be warned before anything starts — and the resolution is only lowered as a last resort.</div>
+              </div>
+            </div>
+            <div style="display:flex;justify-content:flex-end;gap:8px">
+              <div style="height:34px;padding:0 20px;border-radius:4px;background:#005FB8;color:#FFFFFF;font-size:14px;font-weight:600;display:flex;align-items:center">Analyse &amp; compress</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DOWNLOAD -->
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:13px;font-weight:600;color:#3A3A3A">Download from YouTube — cookie source raised out of the dropdown</div>
+        <div style="width:912px;background:#F3F3F3;border:1px solid #C4C4C4;border-radius:8px;overflow:hidden;box-shadow:0 10px 28px rgba(0,0,0,.12)">
+          <div style="padding:16px 24px 0;display:flex;gap:24px;border-bottom:1px solid #E5E5E5">
+            <div style="font-size:14px;color:#5E5E5E;padding-bottom:8px">Burn Subtitles</div>
+            <div style="font-size:14px;color:#5E5E5E;padding-bottom:8px">Compress</div>
+            <div style="font-size:14px;font-weight:600;padding-bottom:8px;box-shadow:inset 0 -3px 0 #005FB8">Download from YouTube</div>
+          </div>
+          <div style="padding:20px 24px;display:flex;flex-direction:column;gap:16px">
+            <div style="background:#FFFFFF;border:1px solid #E5E5E5;border-radius:8px;padding:20px;display:grid;grid-template-columns:150px 1fr;gap:12px 16px;align-items:center">
+              <div style="font-size:14px">YouTube link</div>
+              <div style="height:32px;border:1px solid #E0E0E0;border-bottom-color:#C4C4C4;border-radius:4px;background:#FDFDFD;display:flex;align-items:center;padding:0 10px;font-size:14px">https://www.youtube.com/watch?v=8xg3vE8Ie_E</div>
+              <div style="font-size:14px">Save to</div>
+              <div style="display:flex;gap:8px">
+                <div style="flex:1;height:32px;border:1px solid #E0E0E0;border-bottom-color:#C4C4C4;border-radius:4px;background:#FDFDFD;display:flex;align-items:center;padding:0 10px;font-size:14px">C:\Users\Mohammad\Downloads</div>
+                <div style="height:32px;padding:0 16px;border:1px solid #E0E0E0;border-bottom-color:#C4C4C4;border-radius:4px;background:#FBFBFB;display:flex;align-items:center;font-size:14px">Browse…</div>
+              </div>
+              <div style="font-size:14px;align-self:start;padding-top:8px">This video</div>
+              <div style="display:flex;gap:12px;align-items:center;border:1px solid #EDEDED;border-radius:6px;background:#FAFAFA;padding:10px 12px">
+                <div style="width:96px;height:54px;border-radius:4px;background:#DCDCDC;flex:none;display:flex;align-items:center;justify-content:center;font-size:10px;color:#8D8D8D">thumbnail</div>
+                <div style="display:flex;flex-direction:column;gap:2px;flex:1">
+                  <div style="font-size:14px;font-weight:600">Rick Astley — Never Gonna Give You Up</div>
+                  <div style="font-size:12px;color:#5E5E5E">3:33 · 8 qualities available · checked just now</div>
+                </div>
+                <div style="height:28px;padding:0 12px;border:1px solid #E0E0E0;border-radius:4px;background:#FBFBFB;display:flex;align-items:center;font-size:12px">Check again</div>
+              </div>
+
+              <div style="font-size:14px">Video quality</div>
+              <div style="display:flex;align-items:center;gap:12px">
+                <div style="width:280px;height:32px;border:1px solid #E0E0E0;border-bottom-color:#C4C4C4;border-radius:4px;background:#FDFDFD;display:flex;align-items:center;justify-content:space-between;padding:0 10px;font-size:14px">
+                  <div>1080p<span style="color:#5E5E5E"> · about 192 MB</span></div><div style="font-size:9px;color:#5E5E5E">&#9660;</div>
+                </div>
+                <div style="font-size:12px;color:#8D8D8D">Only what this video actually has</div>
+              </div>
+
+              <div style="font-size:14px">English subtitles</div>
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <div style="width:20px;height:20px;border-radius:4px;background:#005FB8;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px">&#10003;</div>
+                  <div style="font-size:14px">Download English subtitles</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;padding-left:28px">
+                  <div style="width:14px;height:14px;border-radius:50%;background:#0F7B0F;color:#fff;font-size:9px;display:flex;align-items:center;justify-content:center">&#10003;</div>
+                  <div style="font-size:12px;color:#0F7B0F;font-weight:600">Written by a person</div>
+                  <div style="font-size:12px;color:#5E5E5E">— the best kind this app can get</div>
+                </div>
+              </div>
+
+              <div style="grid-column:1 / -1;height:1px;background:#EDEDED;margin:4px 0"></div>
+
+              <div style="font-size:14px;align-self:start;padding-top:6px">YouTube access</div>
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <div style="display:flex;gap:8px">
+                  <div style="flex:1;border:2px solid #005FB8;border-radius:6px;background:#F5FAFF;padding:10px 12px;display:flex;flex-direction:column;gap:2px">
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <div style="width:14px;height:14px;border-radius:50%;border:1px solid #005FB8;display:flex;align-items:center;justify-content:center"><div style="width:6px;height:6px;border-radius:50%;background:#005FB8"></div></div>
+                      <div style="font-size:14px;font-weight:600">Try without signing in</div>
+                    </div>
+                    <div style="font-size:12px;line-height:16px;color:#5E5E5E;padding-left:22px">Works for most public videos. If YouTube asks for a bot check, the app will offer to sign in.</div>
+                  </div>
+                  <div style="flex:1;border:1px solid #E0E0E0;border-radius:6px;background:#FBFBFB;padding:10px 12px;display:flex;flex-direction:column;gap:2px">
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <div style="width:14px;height:14px;border-radius:50%;border:1px solid #8D8D8D"></div>
+                      <div style="font-size:14px;font-weight:600">Sign in to YouTube</div>
+                    </div>
+                    <div style="font-size:12px;line-height:16px;color:#5E5E5E;padding-left:22px">Opens a sign-in window owned by this app. Needed for private, age-restricted or bot-checked videos.</div>
+                  </div>
+                  <div style="flex:1;border:1px solid #E0E0E0;border-radius:6px;background:#FBFBFB;padding:10px 12px;display:flex;flex-direction:column;gap:2px">
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <div style="width:14px;height:14px;border-radius:50%;border:1px solid #8D8D8D"></div>
+                      <div style="font-size:14px;font-weight:600">Use a browser I'm signed into</div>
+                    </div>
+                    <div style="font-size:12px;line-height:16px;color:#5E5E5E;padding-left:22px">Firefox, Edge, Chrome, Brave, or a cookies.txt file.</div>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <div style="width:14px;height:14px;border:1px solid #8D8D8D;border-radius:3px;flex:none"></div>
+                  <div style="font-size:12px;color:#5E5E5E">Cookies are passed straight to yt-dlp. This app never shows, stores or copies their contents.</div>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;justify-content:flex-end">
+              <div style="height:34px;padding:0 20px;border-radius:4px;background:#005FB8;color:#FFFFFF;font-size:14px;font-weight:600;display:flex;align-items:center">Download video &amp; subtitles</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ INSPECTION ============ -->
+  <div style="display:flex;flex-direction:column;gap:20px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:900px">
+      <div style="font-size:24px;line-height:32px;font-weight:600">3 · Reading the link</div>
+      <div style="font-size:14px;line-height:22px;color:#5E5E5E;text-wrap:pretty">Pasting a link starts a 6–8 second probe. Everything below the link — the video summary, the quality list, the subtitle line — is one block that has three conditions: empty, filled, or failed. The link field, the folder and the access cards never change, so a failed probe is fixed and re-run without retyping anything.</div>
+    </div>
+
+    <div style="display:flex;flex-wrap:wrap;gap:24px">
+
+      <!-- STATE 3 INSPECTING -->
+      <div style="width:620px;display:flex;flex-direction:column;gap:8px">
+        <div style="font-size:13px;font-weight:600;color:#3A3A3A">State 3 — Inspecting, 6–8 seconds</div>
+        <div style="background:#FFFFFF;border:1px solid #E5E5E5;border-radius:8px;padding:20px;display:grid;grid-template-columns:130px 1fr;gap:12px 16px;align-items:center">
+          <div style="font-size:14px">YouTube link</div>
+          <div style="height:32px;border:1px solid #E0E0E0;border-bottom-color:#C4C4C4;border-radius:4px;background:#FDFDFD;display:flex;align-items:center;padding:0 10px;font-size:14px">https://www.youtube.com/watch?v=dQw4w9WgXcQ</div>
+
+          <div style="grid-column:1 / -1;border:1px solid #EDEDED;border-radius:6px;background:#FAFAFA;padding:14px 12px;display:flex;gap:12px;align-items:center">
+            <div style="width:18px;height:18px;border-radius:50%;border:2px solid #C7DFF5;border-top-color:#005FB8;flex:none"></div>
+            <div style="display:flex;flex-direction:column;gap:2px;flex:1">
+              <div style="font-size:14px;font-weight:600">Checking what this video offers…</div>
+              <div style="font-size:12px;color:#5E5E5E">Usually 6 to 8 seconds. Qualities and subtitles appear here when the answer arrives.</div>
+            </div>
+            <div style="height:28px;padding:0 12px;border:1px solid #E0E0E0;border-radius:4px;background:#FBFBFB;display:flex;align-items:center;font-size:12px">Stop</div>
+          </div>
+
+          <div style="font-size:14px;color:#A0A0A0">Video quality</div>
+          <div style="width:280px;height:32px;border:1px solid #EAEAEA;border-radius:4px;background:#F7F7F7;display:flex;align-items:center;justify-content:space-between;padding:0 10px;font-size:14px;color:#A0A0A0"><div>—</div><div style="font-size:9px">&#9660;</div></div>
+
+          <div style="font-size:14px;color:#A0A0A0">English subtitles</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:20px;height:20px;border-radius:4px;border:1px solid #D0D0D0;background:#F7F7F7"></div>
+            <div style="font-size:14px;color:#A0A0A0">Download English subtitles</div>
+            <div style="font-size:12px;color:#A0A0A0">— not known yet</div>
+          </div>
+
+          <div style="grid-column:1 / -1;display:flex;justify-content:flex-end;padding-top:4px">
+            <div style="height:34px;padding:0 20px;border-radius:4px;background:#EDEDED;color:#A0A0A0;font-size:14px;font-weight:600;display:flex;align-items:center">Download video &amp; subtitles</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STATE 5 INSPECTION FAILED -->
+      <div style="width:620px;display:flex;flex-direction:column;gap:8px">
+        <div style="font-size:13px;font-weight:600;color:#3A3A3A">State 5 — Inspection failed · fix the cause, check again</div>
+        <div style="background:#FFFFFF;border:1px solid #E5E5E5;border-radius:8px;padding:20px;display:grid;grid-template-columns:130px 1fr;gap:12px 16px;align-items:center">
+          <div style="font-size:14px">YouTube link</div>
+          <div style="height:32px;border:1px solid #E0E0E0;border-bottom-color:#C4C4C4;border-radius:4px;background:#FDFDFD;display:flex;align-items:center;padding:0 10px;font-size:14px">https://www.youtube.com/watch?v=dQw4w9WgXcQ</div>
+
+          <div style="grid-column:1 / -1;border:1px solid #F0C3C6;border-radius:6px;background:#FDF6F6;padding:14px 12px;display:flex;gap:12px">
+            <div style="width:18px;height:18px;border-radius:50%;background:#C42B1C;color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none;margin-top:1px">!</div>
+            <div style="display:flex;flex-direction:column;gap:8px;flex:1">
+              <div style="font-size:14px;font-weight:600;color:#C42B1C">Couldn't ask YouTube about this video</div>
+              <div style="font-size:13px;line-height:19px;color:#1B1B1B;text-wrap:pretty">YouTube wants proof you're a person before it will say what this video contains. The link itself looks fine. Choose how to sign in below, then check again — you don't need to paste the link twice.</div>
+              <div style="display:flex;gap:8px;align-items:center">
+                <div style="height:32px;padding:0 14px;border-radius:4px;background:#005FB8;color:#fff;font-size:14px;font-weight:600;display:flex;align-items:center">Sign in and check again</div>
+                <div style="height:32px;padding:0 14px;border:1px solid #E0E0E0;border-radius:4px;background:#FBFBFB;display:flex;align-items:center;font-size:14px">Check again</div>
+                <div style="flex:1"></div>
+                <div style="font-size:12px;color:#005FB8">Error details</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="font-size:14px;align-self:start;padding-top:6px">YouTube access</div>
+          <div style="display:flex;gap:8px">
+            <div style="flex:1;border:1px solid #E0E0E0;border-radius:6px;background:#FBFBFB;padding:8px 10px;display:flex;align-items:center;gap:8px">
+              <div style="width:14px;height:14px;border-radius:50%;border:1px solid #8D8D8D;flex:none"></div>
+              <div style="font-size:13px">Without signing in</div>
+            </div>
+            <div style="flex:1;border:2px solid #005FB8;border-radius:6px;background:#F5FAFF;padding:8px 10px;display:flex;align-items:center;gap:8px">
+              <div style="width:14px;height:14px;border-radius:50%;border:1px solid #005FB8;display:flex;align-items:center;justify-content:center;flex:none"><div style="width:6px;height:6px;border-radius:50%;background:#005FB8"></div></div>
+              <div style="font-size:13px;font-weight:600">Sign in to YouTube</div>
+            </div>
+            <div style="flex:1;border:1px solid #E0E0E0;border-radius:6px;background:#FBFBFB;padding:8px 10px;display:flex;align-items:center;gap:8px">
+              <div style="width:14px;height:14px;border-radius:50%;border:1px solid #8D8D8D;flex:none"></div>
+              <div style="font-size:13px">Use a browser</div>
+            </div>
+          </div>
+
+          <div style="grid-column:1 / -1;display:flex;justify-content:flex-end;padding-top:4px">
+            <div style="height:34px;padding:0 20px;border-radius:4px;background:#EDEDED;color:#A0A0A0;font-size:14px;font-weight:600;display:flex;align-items:center">Download video &amp; subtitles</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- QUALITY LIST OPEN -->
+      <div style="width:460px;display:flex;flex-direction:column;gap:8px">
+        <div style="font-size:13px;font-weight:600;color:#3A3A3A">Quality list open — the 8 this video really has</div>
+        <div style="display:flex;flex-direction:column;gap:0">
+          <div style="width:340px;height:32px;border:1px solid #005FB8;border-radius:4px;background:#FDFDFD;display:flex;align-items:center;justify-content:space-between;padding:0 10px;font-size:14px">
+            <div>1080p<span style="color:#5E5E5E"> · about 192 MB</span></div><div style="font-size:9px;color:#5E5E5E">&#9650;</div>
+          </div>
+          <div style="width:340px;margin-top:4px;background:#FFFFFF;border:1px solid #E0E0E0;border-radius:8px;box-shadow:0 8px 20px rgba(0,0,0,.14);padding:4px;display:flex;flex-direction:column">
+            <div style="height:36px;border-radius:4px;background:#F5F5F5;display:flex;align-items:center;gap:8px;padding:0 10px">
+              <div style="font-size:14px;font-weight:600;flex:1">Best available</div>
+              <div style="font-size:12px;color:#5E5E5E">2160p here</div>
+            </div>
+            <div style="height:1px;background:#EDEDED;margin:4px 8px"></div>
+            <div style="height:36px;display:flex;align-items:center;gap:6px;padding:0 10px">
+              <div style="font-size:14px;flex:1">2160p <span style="color:#5E5E5E">(4K)</span></div>
+              <div style="width:14px;height:14px;border-radius:50%;background:#FFF4CE;border:1px solid #F2D98C;color:#9D5D00;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center">!</div>
+              <div style="font-size:12px;color:#5E5E5E;width:76px;text-align:right">about 742 MB</div>
+            </div>
+            <div style="height:36px;display:flex;align-items:center;gap:6px;padding:0 10px">
+              <div style="font-size:14px;flex:1">1440p</div>
+              <div style="width:14px;height:14px;border-radius:50%;background:#FFF4CE;border:1px solid #F2D98C;color:#9D5D00;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center">!</div>
+              <div style="font-size:12px;color:#5E5E5E;width:76px;text-align:right">about 318 MB</div>
+            </div>
+            <div style="height:36px;border-radius:4px;background:#EFF6FC;display:flex;align-items:center;gap:6px;padding:0 10px">
+              <div style="font-size:14px;flex:1;font-weight:600">1080p</div>
+              <div style="font-size:12px;color:#5E5E5E;width:76px;text-align:right">about 192 MB</div>
+            </div>
+            <div style="height:36px;display:flex;align-items:center;gap:6px;padding:0 10px">
+              <div style="font-size:14px;flex:1">720p <span style="color:#5E5E5E">60 fps</span></div>
+              <div style="font-size:12px;color:#5E5E5E;width:76px;text-align:right">about 121 MB</div>
+            </div>
+            <div style="height:36px;display:flex;align-items:center;gap:6px;padding:0 10px">
+              <div style="font-size:14px;flex:1">480p</div>
+              <div style="font-size:12px;color:#5E5E5E;width:76px;text-align:right">about 48 MB</div>
+            </div>
+            <div style="height:36px;display:flex;align-items:center;gap:6px;padding:0 10px">
+              <div style="font-size:14px;flex:1">360p</div>
+              <div style="font-size:12px;color:#5E5E5E;width:76px;text-align:right"></div>
+            </div>
+            <div style="height:36px;display:flex;align-items:center;gap:6px;padding:0 10px">
+              <div style="font-size:14px;flex:1">240p</div>
+              <div style="font-size:12px;color:#5E5E5E;width:76px;text-align:right"></div>
+            </div>
+            <div style="height:36px;display:flex;align-items:center;gap:6px;padding:0 10px">
+              <div style="font-size:14px;flex:1">144p</div>
+              <div style="font-size:12px;color:#5E5E5E;width:76px;text-align:right">about 9 MB</div>
+            </div>
+            <div style="height:1px;background:#EDEDED;margin:4px 8px"></div>
+            <div style="display:flex;gap:6px;padding:4px 10px 8px">
+              <div style="width:14px;height:14px;border-radius:50%;background:#FFF4CE;border:1px solid #F2D98C;color:#9D5D00;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none;margin-top:2px">!</div>
+              <div style="font-size:11px;line-height:16px;color:#5E5E5E;text-wrap:pretty">Above 1080p this video only exists in a newer format. It downloads fine, but some older players won't open it.</div>
+            </div>
+          </div>
+        </div>
+        <div style="font-size:12px;line-height:18px;color:#5E5E5E;text-wrap:pretty;max-width:340px">Sizes come from the probe and are missing for about a third of formats — that column simply stays empty rather than showing a guess or a dash. Frame rate is printed only above 30.</div>
+      </div>
+
+      <!-- FOUR SUBTITLE OUTCOMES -->
+      <div style="width:620px;display:flex;flex-direction:column;gap:8px">
+        <div style="font-size:13px;font-weight:600;color:#3A3A3A">The English-subtitle line — all four outcomes</div>
+        <div style="background:#FFFFFF;border:1px solid #E5E5E5;border-radius:8px;padding:16px;display:flex;flex-direction:column;gap:16px">
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="width:20px;height:20px;border-radius:4px;background:#005FB8;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px">&#10003;</div>
+              <div style="font-size:14px">Download English subtitles</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;padding-left:28px">
+              <div style="width:14px;height:14px;border-radius:50%;background:#0F7B0F;color:#fff;font-size:9px;display:flex;align-items:center;justify-content:center">&#10003;</div>
+              <div style="font-size:12px;color:#0F7B0F;font-weight:600">Written by a person</div>
+              <div style="font-size:12px;color:#5E5E5E">— the best kind this app can get</div>
+            </div>
+          </div>
+          <div style="height:1px;background:#F2F2F2"></div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="width:20px;height:20px;border-radius:4px;background:#005FB8;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px">&#10003;</div>
+              <div style="font-size:14px">Download English subtitles</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;padding-left:28px">
+              <div style="width:14px;height:14px;border-radius:50%;background:#9D5D00;color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center">!</div>
+              <div style="font-size:12px;color:#9D5D00;font-weight:600">Made by speech recognition</div>
+              <div style="font-size:12px;color:#5E5E5E">— readable, with mistakes in names and numbers</div>
+            </div>
+          </div>
+          <div style="height:1px;background:#F2F2F2"></div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="width:20px;height:20px;border-radius:4px;background:#005FB8;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px">&#10003;</div>
+              <div style="font-size:14px">Download English subtitles</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;padding-left:28px;flex-wrap:wrap">
+              <div style="width:14px;height:14px;border-radius:50%;background:#9D5D00;color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center">!</div>
+              <div style="font-size:12px;color:#9D5D00;font-weight:600">Machine-translated from Japanese</div>
+              <div style="font-size:12px;color:#5E5E5E">— the roughest kind. Expect to edit it before burning.</div>
+            </div>
+          </div>
+          <div style="height:1px;background:#F2F2F2"></div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="width:20px;height:20px;border-radius:4px;border:1px solid #D0D0D0;background:#F7F7F7"></div>
+              <div style="font-size:14px;color:#A0A0A0">Download English subtitles</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;padding-left:28px">
+              <div style="width:14px;height:14px;border-radius:50%;border:1px solid #8D8D8D;color:#5E5E5E;font-size:9px;display:flex;align-items:center;justify-content:center">–</div>
+              <div style="font-size:12px;color:#5E5E5E;font-weight:600">This video has no English subtitles</div>
+              <div style="font-size:12px;color:#5E5E5E">— the video downloads on its own</div>
+            </div>
+          </div>
+        </div>
+        <div style="font-size:12px;line-height:18px;color:#5E5E5E;text-wrap:pretty">Same row, same position, four readings. Only the fourth disables the checkbox, and it stays grey — nothing is wrong, there is simply nothing to fetch. Green appears exactly once, for the human-written case, so it means something.</div>
+      </div>
+
+      <!-- STATE 14 HAND-OFF -->
+      <div style="width:620px;display:flex;flex-direction:column;gap:8px">
+        <div style="font-size:13px;font-weight:600;color:#3A3A3A">State 14 — hand-off to Burn Subtitles · subtitle offered, not chosen</div>
+        <div style="background:#FFFFFF;border:1px solid #E5E5E5;border-radius:8px;padding:20px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;align-items:center;gap:8px;background:#DFF6DD;border:1px solid #B6E0B2;border-radius:6px;padding:8px 12px">
+            <div style="width:16px;height:16px;border-radius:50%;background:#0F7B0F;color:#fff;font-size:10px;display:flex;align-items:center;justify-content:center;flex:none">&#10003;</div>
+            <div style="font-size:13px;flex:1">Downloaded. The video is filled in below — choose a subtitle to burn.</div>
+          </div>
+          <div style="display:grid;grid-template-columns:110px 1fr;gap:12px 16px;align-items:center">
+            <div style="font-size:14px">Video file</div>
+            <div style="height:32px;border:1px solid #E0E0E0;border-bottom-color:#C4C4C4;border-radius:4px;background:#FDFDFD;display:flex;align-items:center;padding:0 10px;font-size:14px">…\Downloads\Never Gonna Give You Up.mp4</div>
+            <div style="font-size:14px;align-self:start;padding-top:6px">Subtitle file</div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div style="display:flex;gap:8px">
+                <div style="flex:1;height:32px;border:1px solid #E0E0E0;border-bottom-color:#C4C4C4;border-radius:4px;background:#FDFDFD;display:flex;align-items:center;padding:0 10px;font-size:14px;color:#8D8D8D">Choose an .srt file</div>
+                <div style="height:32px;padding:0 16px;border:1px solid #E0E0E0;border-bottom-color:#C4C4C4;border-radius:4px;background:#FBFBFB;display:flex;align-items:center;font-size:14px">Browse…</div>
+              </div>
+              <div style="border:1px dashed #C7DFF5;background:#F5FAFF;border-radius:6px;padding:10px 12px;display:flex;gap:10px;align-items:center">
+                <div style="display:flex;flex-direction:column;gap:2px;flex:1">
+                  <div style="font-size:13px;font-weight:600">Never Gonna Give You Up.en.srt</div>
+                  <div style="font-size:12px;color:#9D5D00">Made by speech recognition — worth reading before you burn it in</div>
+                </div>
+                <div style="height:28px;padding:0 12px;border-radius:4px;background:#005FB8;color:#fff;font-size:13px;font-weight:600;display:flex;align-items:center;flex:none">Use this</div>
+                <div style="height:28px;padding:0 10px;border:1px solid #E0E0E0;border-radius:4px;background:#FFFFFF;display:flex;align-items:center;font-size:13px;flex:none">Open it</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="font-size:12px;line-height:18px;color:#5E5E5E;text-wrap:pretty">The field stays empty on purpose; the downloaded file sits directly beneath it as a suggestion with its provenance attached, so accepting it is one click and replacing it is the same Browse button as always. The suggestion disappears once a subtitle is picked. When the subtitle was human-written, the second line reads "Written by a person" in green and the suggestion carries no warning.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ STATES ============ -->
+  <div style="display:flex;flex-direction:column;gap:20px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:900px">
+      <div style="font-size:24px;line-height:32px;font-weight:600">4 · The download sequence</div>
+      <div style="font-size:14px;line-height:22px;color:#5E5E5E;text-wrap:pretty">One region, one anatomy, seven states. The five-step rail at the top never changes shape, so every state is read as a position in the same journey — not as a new screen. Below it: a headline sentence, a supporting sentence, the bar, and a figures row. Only the log holds raw tool output.</div>
+    </div>
+
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:12px;color:#5E5E5E">
+      <div style="padding:4px 10px;border-radius:12px;background:#FFFFFF;border:1px solid #D8D8D8">Anatomy: rail → headline → detail → bar → figures + Cancel</div>
+      <div style="padding:4px 10px;border-radius:12px;background:#FFFFFF;border:1px solid #D8D8D8">Colour carries state, never alone: each state also changes the headline verb</div>
+    </div>
+
+    <div style="display:flex;flex-wrap:wrap;gap:24px">
+
+      <!-- 3 PREPARING -->
+      <div style="width:620px;display:flex;flex-direction:column;gap:8px">
+        <div style="font-size:13px;font-weight:600;color:#3A3A3A">State 6 — Preparing</div>
+        <div style="background:#FFFFFF;border:1px solid #E5E5E5;border-radius:8px;padding:16px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px">
+            <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:11px;font-weight:600;color:#005FB8">Prepare</div><div style="height:3px;border-radius:2px;background:#005FB8"></div></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:11px;color:#8D8D8D">Connect</div><div style="height:3px;border-radius:2px;background:#E5E5E5"></div></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:11px;color:#8D8D8D">Download</div><div style="height:3px;border-radius:2px;background:#E5E5E5"></div></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:11px;color:#8D8D8D">Process</div><div style="height:3px;border-radius:2px;background:#E5E5E5"></div></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:11px;color:#8D8D8D">Done</div><div style="height:3px;border-radius:2px;background:#E5E5E5"></div></div>
+          </div>
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <div style="width:20px;height:20px;border-radius:50%;border:2px solid #C7DFF5;border-top-color:#005FB8;flex:none;margin-top:2px"></div>
+            <div style="display:flex;flex-direction:column;gap:2px">
+              <div style="font-size:18px;line-height:24px;font-weight:600">Preparing the download</div>
+              <div style="font-size:14px;line-height:20px;color:#5E5E5E">Reading the link and asking YouTube what's available. This usually takes a few seconds.</div>
+            </div>
+          </div>
+          <div style="height:4px;border-radius:2px;background:#E5E5E5;overflow:hidden;position:relative"><div style="position:absolute;left:18%;width:34%;top:0;bottom:0;border-radius:2px;background:#005FB8"></div></div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="font-size:12px;color:#8D8D8D;flex:1">No figures yet</div>
+            <div style="height:32px;padding:0 16px;border:1px solid #E0E0E0;border-bottom-color:#C4C4C4;border-radius:4px;background:#FBFBFB;display:flex;align-items:center;font-size:14px">Cancel</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4 STARTED -->
+      <div style="width:620px;display:flex;flex-direction:column;gap:8px">
+        <div style="font-size:13px;font-weight:600;color:#3A3A3A">State 7 — Download started (got past YouTube's checks)</div>
+        <div style="background:#FFFFFF;border:1px solid #E5E5E5;border-radius:8px;padding:16px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px">
+            <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:11px;color:#0F7B0F;font-weight:600">Prepare</div><div style="height:3px;border-radius:2px;background:#0F7B0F"></div></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:11px;font-weight:600;color:#0F7B0F">Connect</div><div style="height:3px;border-radius:2px;background:#0F7B0F"></div></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:11px;color:#8D8D8D">Download</div><div style="height:3px;border-radius:2px;background:#E5E5E5"></div></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:11px;color:#8D8D8D">Process</div><div style="height:3px;border-radius:2px;background:#E5E5E5"></div></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:11px;color:#8D8D8D">Done</div><div style="height:3px;border-radius:2px;background:#E5E5E5"></div></div>
+          </div>
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <div style="width:20px;height:20px;border-radius:50%;background:#0F7B0F;color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;flex:none;margin-top:2px">&#10003;</div>
+            <div style="display:flex;flex-direction:column;gap:2px">
+              <div style="font-size:18px;line-height:24px;font-weight:600;color:#0F7B0F">Download started</div>
+              <div style="font-size:14px;line-height:20px;color:#5E5E5E">YouTube accepted the request. Saving as <span style="color:#1B1B1B">Never Gonna Give You Up.mp4</span></div>
+            </div>
+          </div>
+          <div style="height:4px;border-radius:2px;background:#E5E5E5;overflow:hidden"><div style="width:2%;height:4px;border-radius:2px;background:#005FB8"></div></div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="font-size:12px;color:#5E5E5E;flex:1">Two parts to fetch — video, then audio</div>
+            <div style="height:32px;padding:0 16px;border:1px solid #E0E0E0;border-bottom-color:#C4C4C4;border-radius:4px;background:#FBFBFB;display:flex;align-items:center;font-size:14px">Cancel</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5 DOWNLOADING -->
+      <div style="width:620px;display:flex;flex-direction:column;gap:8px">
+        <div style="font-size:13px;font-weight:600;color:#3A3A3A">State 8 — Downloading · two-part bar so the restart isn't a regression</div>
+        <div style="background:#FFFFFF;border:1px solid #E5E5E5;border-radius:8px;padding:16px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px">
+            <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:11px;color:#0F7B0F;font-weight:600">Prepare</div><div style="height:3px;border-radius:2px;background:#0F7B0F"></div></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:11px;color:#0F7B0F;font-weight:600">Connect</div><div style="height:3px;border-radius:2px;background:#0F7B0F"></div></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:11px;font-weight:600;color:#005FB8">Download</div><div style="height:3px;border-radius:2px;background:#005FB8"></div></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:11px;color:#8D8D8D">Process</div><div style="height:3px;border-radius:2px;background:#E5E5E5"></div></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:11px;color:#8D8D8D">Done</div><div style="height:3px;border-radius:2px;background:#E5E5E5"></div></div>
+          </div>
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <div style="width:20px;height:20px;border-radius:50%;border:2px solid #C7DFF5;border-top-color:#005FB8;flex:none;margin-top:2px"></div>
+            <div style="display:flex;flex-direction:column;gap:2px;flex:1">
+              <div style="display:flex;align-items:baseline;gap:8px">
+                <div style="font-size:18px;line-height:24px;font-weight:600">Downloading video</div>
+                <div style="font-size:12px;color:#5E5E5E">part 1 of 2</div>
+              </div>
+              <div style="font-size:14px;line-height:20px;color:#5E5E5E">Video and audio arrive separately, then get merged.</div>
+            </div>
+            <div style="font-size:24px;line-height:28px;font-weight:600;font-variant-numeric:tabular-nums">42<span style="font-size:16px;color:#5E5E5E">%</span></div>
+          </div>
+          <div style="display:flex;gap:3px;align-items:center">
+            <div style="flex:7;height:6px;border-radius:3px;background:#E5E5E5;overflow:hidden"><div style="width:60%;height:6px;border-radius:3px;background:#005FB8"></div></div>
+            <div style="flex:3;height:6px;border-radius:3px;background:#E5E5E5"></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:16px">
+            <div style="display:flex;gap:16px;flex:1;font-size:12px;color:#5E5E5E;font-variant-numeric:tabular-nums">
+              <div><span style="color:#1B1B1B;font-weight:600">218 MB</span> of 512 MB</div>
+              <div><span style="color:#1B1B1B;font-weight:600">8.4 MB/s</span></div>
+              <div><span style="color:#1B1B1B;font-weight:600">3 min</span> left</div>
+            </div>
+            <div style="height:32px;padding:0 16px;border:1px solid #E0E0E0;border-bottom-color:#C4C4C4;border-radius:4px;background:#FBFBFB;display:flex;align-items:center;font-size:14px">Cancel</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6 POST-PROCESSING -->
+      <div style="width:620px;display:flex;flex-direction:column;gap:8px">
+        <div style="font-size:13px;font-weight:600;color:#3A3A3A">State 9 — Post-processing</div>
+        <div style="background:#FFFFFF;border:1px solid #E5E5E5;border-radius:8px;padding:16px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px">
+            <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:11px;color:#0F7B0F;font-weight:600">Prepare</div><div style="height:3px;border-radius:2px;background:#0F7B0F"></div></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:11px;color:#0F7B0F;font-weight:600">Connect</div><div style="height:3px;border-radius:2px;background:#0F7B0F"></div></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:11px;color:#0F7B0F;font-weight:600">Download</div><div style="height:3px;border-radius:2px;background:#0F7B0F"></div></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:11px;font-weight:600;color:#005FB8">Process</div><div style="height:3px;border-radius:2px;background:#005FB8"></div></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:11px;color:#8D8D8D">Done</div><div style="height:3px;border-radius:2px;background:#E5E5E5"></div></div>
+          </div>
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <div style="width:20px;height:20px;border-radius:50%;border:2px solid #C7DFF5;border-top-color:#005FB8;flex:none;margin-top:2px"></div>
+            <div style="display:flex;flex-direction:column;gap:2px">
+              <div style="font-size:18px;line-height:24px;font-weight:600">Merging video and audio</div>
+              <div style="font-size:14px;line-height:20px;color:#5E5E5E">Then the subtitle track is converted to .srt. Nothing left to download.</div>
+            </div>
+          </div>
+          <div style="height:4px;border-radius:2px;background:#E5E5E5;overflow:hidden;position:relative"><div style="position:absolute;left:52%;width:34%;top:0;bottom:0;border-radius:2px;background:#005FB8"></div></div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="font-size:12px;color:#5E5E5E;flex:1">512 MB downloaded · no percentage available for this step</div>
+            <div style="height:32px;padding:0 16px;border:1px solid #E0E0E0;border-bottom-color:#C4C4C4;border-radius:4px;background:#FBFBFB;display:flex;align-items:center;font-size:14px">Cancel</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 7 RETRYING -->
+      <div style="width:620px;display:flex;flex-direction:column;gap:8px">
+        <div style="font-size:13px;font-weight:600;color:#3A3A3A">State 10 — Retrying automatically (not a failure)</div>
+        <div style="background:#FFFFFF;border:1px solid #E5E5E5;border-radius:8px;padding:16px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px">
+            <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:11px;color:#0F7B0F;font-weight:600">Prepare</div><div style="height:3px;border-radius:2px;background:#0F7B0F"></div></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:11px;font-weight:600;color:#9D5D00">Connect</div><div style="height:3px;border-radius:2px;background:#9D5D00"></div></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:11px;color:#8D8D8D">Download</div><div style="height:3px;border-radius:2px;background:#E5E5E5"></div></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:11px;color:#8D8D8D">Process</div><div style="height:3px;border-radius:2px;background:#E5E5E5"></div></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:11px;color:#8D8D8D">Done</div><div style="height:3px;border-radius:2px;background:#E5E5E5"></div></div>
+          </div>
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <div style="width:20px;height:20px;border-radius:50%;border:2px solid #F2D98C;border-top-color:#9D5D00;flex:none;margin-top:2px"></div>
+            <div style="display:flex;flex-direction:column;gap:2px;flex:1">
+              <div style="display:flex;align-items:baseline;gap:8px">
+                <div style="font-size:18px;line-height:24px;font-weight:600;color:#9D5D00">Trying a different method</div>
+                <div style="font-size:12px;color:#5E5E5E">attempt 2 of 3</div>
+              </div>
+              <div style="font-size:14px;line-height:20px;color:#5E5E5E">YouTube turned down the first request. The app is asking again as a different player — this is normal and usually works.</div>
+            </div>
+          </div>
+          <div style="height:4px;border-radius:2px;background:#F5EAD0;overflow:hidden;position:relative"><div style="position:absolute;left:30%;width:34%;top:0;bottom:0;border-radius:2px;background:#9D5D00"></div></div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="font-size:12px;color:#5E5E5E;flex:1">Nothing downloaded yet — no progress is lost</div>
+            <div style="height:32px;padding:0 16px;border:1px solid #E0E0E0;border-bottom-color:#C4C4C4;border-radius:4px;background:#FBFBFB;display:flex;align-items:center;font-size:14px">Cancel</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 10 SUCCEEDED -->
+      <div style="width:620px;display:flex;flex-direction:column;gap:8px">
+        <div style="font-size:13px;font-weight:600;color:#3A3A3A">State 14 — Succeeded, with the hand-off to tab 1</div>
+        <div style="background:#FFFFFF;border:1px solid #E5E5E5;border-radius:8px;padding:16px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px">
+            <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:11px;color:#0F7B0F;font-weight:600">Prepare</div><div style="height:3px;border-radius:2px;background:#0F7B0F"></div></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:11px;color:#0F7B0F;font-weight:600">Connect</div><div style="height:3px;border-radius:2px;background:#0F7B0F"></div></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:11px;color:#0F7B0F;font-weight:600">Download</div><div style="height:3px;border-radius:2px;background:#0F7B0F"></div></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:11px;color:#0F7B0F;font-weight:600">Process</div><div style="height:3px;border-radius:2px;background:#0F7B0F"></div></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:11px;color:#0F7B0F;font-weight:600">Done</div><div style="height:3px;border-radius:2px;background:#0F7B0F"></div></div>
+          </div>
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <div style="width:20px;height:20px;border-radius:50%;background:#0F7B0F;color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;flex:none;margin-top:2px">&#10003;</div>
+            <div style="display:flex;flex-direction:column;gap:2px">
+              <div style="font-size:18px;line-height:24px;font-weight:600;color:#0F7B0F">Download complete</div>
+              <div style="font-size:14px;line-height:20px;color:#5E5E5E">Finished in 4 min 12 s.</div>
+            </div>
+          </div>
+          <div style="border:1px solid #EDEDED;border-radius:6px;background:#FAFAFA;display:flex;flex-direction:column">
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid #EDEDED">
+              <div style="font-size:12px;color:#5E5E5E;width:64px">Video</div>
+              <div style="font-size:14px;flex:1">Never Gonna Give You Up.mp4</div>
+              <div style="font-size:12px;color:#5E5E5E">512 MB</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 12px">
+              <div style="font-size:12px;color:#5E5E5E;width:64px">Subtitles</div>
+              <div style="font-size:14px;flex:1">Never Gonna Give You Up.en.srt</div>
+              <div style="font-size:12px;color:#5E5E5E">86 KB</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="height:34px;padding:0 16px;border-radius:4px;background:#005FB8;color:#FFFFFF;font-size:14px;font-weight:600;display:flex;align-items:center">Go to Burn Subtitles</div>
+            <div style="height:34px;padding:0 16px;border:1px solid #E0E0E0;border-bottom-color:#C4C4C4;border-radius:4px;background:#FBFBFB;display:flex;align-items:center;font-size:14px">Open folder</div>
+            <div style="flex:1"></div>
+            <div style="font-size:12px;color:#8D8D8D">Video carries over; subtitle is offered there</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 9 CANCELLED -->
+      <div style="width:620px;display:flex;flex-direction:column;gap:8px">
+        <div style="font-size:13px;font-weight:600;color:#3A3A3A">State 13 — Cancelled</div>
+        <div style="background:#FFFFFF;border:1px solid #E5E5E5;border-radius:8px;padding:16px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px">
+            <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:11px;color:#8D8D8D">Prepare</div><div style="height:3px;border-radius:2px;background:#C9C9C9"></div></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:11px;color:#8D8D8D">Connect</div><div style="height:3px;border-radius:2px;background:#C9C9C9"></div></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:11px;color:#8D8D8D">Download</div><div style="height:3px;border-radius:2px;background:#C9C9C9"></div></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:11px;color:#8D8D8D">Process</div><div style="height:3px;border-radius:2px;background:#E5E5E5"></div></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:11px;color:#8D8D8D">Done</div><div style="height:3px;border-radius:2px;background:#E5E5E5"></div></div>
+          </div>
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <div style="width:20px;height:20px;border-radius:50%;border:1px solid #8D8D8D;color:#5E5E5E;font-size:11px;display:flex;align-items:center;justify-content:center;flex:none;margin-top:2px">&#10005;</div>
+            <div style="display:flex;flex-direction:column;gap:2px">
+              <div style="font-size:18px;line-height:24px;font-weight:600;color:#5E5E5E">Cancelled at 42%</div>
+              <div style="font-size:14px;line-height:20px;color:#5E5E5E">The partly downloaded file was removed. Nothing was left behind.</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="height:34px;padding:0 16px;border-radius:4px;background:#005FB8;color:#FFFFFF;font-size:14px;font-weight:600;display:flex;align-items:center">Start again</div>
+            <div style="height:34px;padding:0 16px;border:1px solid #E0E0E0;border-bottom-color:#C4C4C4;border-radius:4px;background:#FBFBFB;display:flex;align-items:center;font-size:14px">Show log</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DARK VARIANT OF STATE 5 -->
+      <div style="width:620px;display:flex;flex-direction:column;gap:8px">
+        <div style="font-size:13px;font-weight:600;color:#3A3A3A">State 8 — Dark</div>
+        <div style="background:#2B2B2B;border:1px solid #383838;border-radius:8px;padding:16px;display:flex;flex-direction:column;gap:14px;color:#FFFFFF">
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px">
+            <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:11px;color:#6CCB5F;font-weight:600">Prepare</div><div style="height:3px;border-radius:2px;background:#6CCB5F"></div></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:11px;color:#6CCB5F;font-weight:600">Connect</div><div style="height:3px;border-radius:2px;background:#6CCB5F"></div></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:11px;font-weight:600;color:#60CDFF">Download</div><div style="height:3px;border-radius:2px;background:#60CDFF"></div></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:11px;color:#969696">Process</div><div style="height:3px;border-radius:2px;background:#414141"></div></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:11px;color:#969696">Done</div><div style="height:3px;border-radius:2px;background:#414141"></div></div>
+          </div>
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <div style="width:20px;height:20px;border-radius:50%;border:2px solid #2F4C5C;border-top-color:#60CDFF;flex:none;margin-top:2px"></div>
+            <div style="display:flex;flex-direction:column;gap:2px;flex:1">
+              <div style="display:flex;align-items:baseline;gap:8px">
+                <div style="font-size:18px;line-height:24px;font-weight:600">Downloading video</div>
+                <div style="font-size:12px;color:#CFCFCF">part 1 of 2</div>
+              </div>
+              <div style="font-size:14px;line-height:20px;color:#CFCFCF">Video and audio arrive separately, then get merged.</div>
+            </div>
+            <div style="font-size:24px;line-height:28px;font-weight:600;font-variant-numeric:tabular-nums">42<span style="font-size:16px;color:#CFCFCF">%</span></div>
+          </div>
+          <div style="display:flex;gap:3px;align-items:center">
+            <div style="flex:7;height:6px;border-radius:3px;background:#414141;overflow:hidden"><div style="width:60%;height:6px;border-radius:3px;background:#60CDFF"></div></div>
+            <div style="flex:3;height:6px;border-radius:3px;background:#414141"></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:16px">
+            <div style="display:flex;gap:16px;flex:1;font-size:12px;color:#CFCFCF;font-variant-numeric:tabular-nums">
+              <div><span style="color:#FFFFFF;font-weight:600">218 MB</span> of 512 MB</div>
+              <div><span style="color:#FFFFFF;font-weight:600">8.4 MB/s</span></div>
+              <div><span style="color:#FFFFFF;font-weight:600">3 min</span> left</div>
+            </div>
+            <div style="height:32px;padding:0 16px;border:1px solid #3D3D3D;border-radius:4px;background:#333333;display:flex;align-items:center;font-size:14px">Cancel</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ FAILURE ============ -->
+  <div style="display:flex;flex-direction:column;gap:20px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:900px">
+      <div style="font-size:24px;line-height:32px;font-weight:600">5 · Failure, worked through</div>
+      <div style="font-size:14px;line-height:22px;color:#5E5E5E;text-wrap:pretty">Same region, same rail — the rail stops where the job stopped. Four fixed slots: what happened, why, the one action that fixes it, and the raw detail folded away. All fourteen classified errors fill the same four slots.</div>
+    </div>
+
+    <div style="display:flex;gap:40px;flex-wrap:wrap">
+      <div style="width:960px;display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:13px;font-weight:600;color:#3A3A3A">State 11 — Bot check, in the full window</div>
+        <div style="width:960px;background:#F3F3F3;border:1px solid #C4C4C4;border-radius:8px;overflow:hidden;box-shadow:0 14px 36px rgba(0,0,0,.16)">
+          <div style="height:32px;display:flex;align-items:center;background:#F3F3F3;border-bottom:1px solid #EAEAEA">
+            <div style="display:flex;align-items:center;gap:8px;padding-left:12px;flex:1">
+              <img src="app-icon.png" alt="" style="width:16px;height:16px;display:block">
+              <div style="font-size:12px">Subtitle &amp; Video Compressor</div>
+            </div>
+            <div style="display:flex">
+              <div style="width:46px;height:32px;display:flex;align-items:center;justify-content:center;font-size:10px">&#9472;</div>
+              <div style="width:46px;height:32px;display:flex;align-items:center;justify-content:center;font-size:10px">&#9633;</div>
+              <div style="width:46px;height:32px;display:flex;align-items:center;justify-content:center;font-size:11px">&#10005;</div>
+            </div>
+          </div>
+          <div style="padding:16px 24px 0;display:flex;gap:24px;border-bottom:1px solid #E5E5E5">
+            <div style="font-size:14px;color:#5E5E5E;padding-bottom:8px">Burn Subtitles</div>
+            <div style="font-size:14px;color:#5E5E5E;padding-bottom:8px">Compress</div>
+            <div style="font-size:14px;font-weight:600;padding-bottom:8px;box-shadow:inset 0 -3px 0 #005FB8">Download from YouTube</div>
+          </div>
+
+          <div style="padding:20px 24px;display:flex;flex-direction:column;gap:16px">
+            <div style="background:#FFFFFF;border:1px solid #E5E5E5;border-radius:8px;padding:20px;display:grid;grid-template-columns:150px 1fr;gap:12px 16px;align-items:center;opacity:.55">
+              <div style="font-size:14px">YouTube link</div>
+              <div style="height:32px;border:1px solid #E0E0E0;border-radius:4px;background:#F7F7F7;display:flex;align-items:center;padding:0 10px;font-size:14px;color:#5E5E5E">https://www.youtube.com/watch?v=8xg3vE8Ie_E</div>
+              <div style="font-size:14px">Save to</div>
+              <div style="height:32px;border:1px solid #E0E0E0;border-radius:4px;background:#F7F7F7;display:flex;align-items:center;padding:0 10px;font-size:14px;color:#5E5E5E">C:\Users\Mohammad\Downloads</div>
+            </div>
+
+            <div style="background:#FFFFFF;border:1px solid #F0C3C6;border-radius:8px;overflow:hidden">
+              <div style="height:4px;background:#C42B1C"></div>
+              <div style="padding:16px;display:flex;flex-direction:column;gap:14px">
+                <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px">
+                  <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:11px;color:#0F7B0F;font-weight:600">Prepare</div><div style="height:3px;border-radius:2px;background:#0F7B0F"></div></div>
+                  <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:11px;font-weight:600;color:#C42B1C">Connect</div><div style="height:3px;border-radius:2px;background:#C42B1C"></div></div>
+                  <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:11px;color:#8D8D8D">Download</div><div style="height:3px;border-radius:2px;background:#E5E5E5"></div></div>
+                  <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:11px;color:#8D8D8D">Process</div><div style="height:3px;border-radius:2px;background:#E5E5E5"></div></div>
+                  <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:11px;color:#8D8D8D">Done</div><div style="height:3px;border-radius:2px;background:#E5E5E5"></div></div>
+                </div>
+
+                <div style="display:flex;gap:12px;align-items:flex-start">
+                  <div style="width:20px;height:20px;border-radius:50%;background:#C42B1C;color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none;margin-top:2px">!</div>
+                  <div style="display:flex;flex-direction:column;gap:6px;flex:1">
+                    <div style="font-size:18px;line-height:24px;font-weight:600;color:#C42B1C">YouTube asked this download to prove it isn't a robot</div>
+                    <div style="font-size:14px;line-height:20px;color:#1B1B1B;max-width:640px;text-wrap:pretty">Anonymous downloads from this network have been blocked. The app tried three different methods and YouTube declined all of them. This is about the network, not about the video — the video itself is fine.</div>
+                    <div style="font-size:14px;line-height:20px;color:#5E5E5E;max-width:640px;text-wrap:pretty">Signing in proves you're a person. The sign-in window belongs to this app; your password never goes anywhere else, and the app never reads or copies your cookies.</div>
+                  </div>
+                </div>
+
+                <div style="display:flex;align-items:center;gap:8px">
+                  <div style="height:34px;padding:0 16px;border-radius:4px;background:#005FB8;color:#FFFFFF;font-size:14px;font-weight:600;display:flex;align-items:center">Sign in to YouTube and retry</div>
+                  <div style="height:34px;padding:0 16px;border:1px solid #E0E0E0;border-bottom-color:#C4C4C4;border-radius:4px;background:#FBFBFB;display:flex;align-items:center;font-size:14px">Use a browser I'm signed into</div>
+                  <div style="flex:1"></div>
+                  <div style="height:34px;padding:0 12px;border-radius:4px;display:flex;align-items:center;font-size:14px;color:#005FB8">Copy error details</div>
+                </div>
+
+                <div style="border-top:1px solid #F2F2F2;padding-top:10px;display:flex;align-items:center;gap:6px;font-size:12px;color:#5E5E5E">
+                  <div style="font-size:9px">&#9654;</div>
+                  <div>What yt-dlp reported</div>
+                  <div style="font-family:'Cascadia Mono',Consolas,monospace;color:#8D8D8D">ERROR: Sign in to confirm you're not a bot</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="border-top:1px solid #E5E5E5;background:#FAFAFA;padding:12px 24px 16px;display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="width:8px;height:8px;border-radius:50%;background:#0F7B0F"></div>
+              <div style="font-size:12px;color:#5E5E5E">All tools ready — ffmpeg, ffprobe, yt-dlp, deno</div>
+              <div style="flex:1"></div>
+              <div style="height:28px;padding:0 12px;border:1px solid #E0E0E0;border-radius:4px;background:#FBFBFB;display:flex;align-items:center;font-size:12px">Locate FFmpeg…</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#5E5E5E">
+              <div style="font-size:9px">&#9654;</div>
+              <div>Show log</div>
+              <div style="color:#8D8D8D">— 41 lines, 3 attempts</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="width:620px;display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:13px;font-weight:600;color:#3A3A3A">The same four slots, three other classifications</div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="background:#FFFFFF;border:1px solid #F0C3C6;border-radius:8px;padding:14px 16px;display:flex;gap:12px">
+            <div style="width:20px;height:20px;border-radius:50%;background:#C42B1C;color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none;margin-top:2px">!</div>
+            <div style="display:flex;flex-direction:column;gap:6px;flex:1">
+              <div style="font-size:16px;line-height:22px;font-weight:600;color:#C42B1C">The disk ran out of space</div>
+              <div style="font-size:14px;line-height:20px;color:#1B1B1B">Drive C: has 240 MB free and this video needs about 512 MB. The partial file has been removed.</div>
+              <div style="display:flex;gap:8px;padding-top:2px">
+                <div style="height:32px;padding:0 14px;border-radius:4px;background:#005FB8;color:#fff;font-size:14px;font-weight:600;display:flex;align-items:center">Choose another folder</div>
+                <div style="height:32px;padding:0 14px;border:1px solid #E0E0E0;border-radius:4px;background:#FBFBFB;display:flex;align-items:center;font-size:14px">Try again</div>
+              </div>
+            </div>
+          </div>
+          <div style="background:#FFFFFF;border:1px solid #F0C3C6;border-radius:8px;padding:14px 16px;display:flex;gap:12px">
+            <div style="width:20px;height:20px;border-radius:50%;background:#C42B1C;color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none;margin-top:2px">!</div>
+            <div style="display:flex;flex-direction:column;gap:6px;flex:1">
+              <div style="font-size:16px;line-height:22px;font-weight:600;color:#C42B1C">This video is private</div>
+              <div style="font-size:14px;line-height:20px;color:#1B1B1B">Only the owner and people they've invited can watch it. Signing in will only help if your account is one of them.</div>
+              <div style="display:flex;gap:8px;padding-top:2px">
+                <div style="height:32px;padding:0 14px;border-radius:4px;background:#005FB8;color:#fff;font-size:14px;font-weight:600;display:flex;align-items:center">Sign in to YouTube and retry</div>
+              </div>
+            </div>
+          </div>
+          <div style="background:#FFFFFF;border:1px solid #F0C3C6;border-radius:8px;padding:14px 16px;display:flex;gap:12px">
+            <div style="width:20px;height:20px;border-radius:50%;background:#C42B1C;color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none;margin-top:2px">!</div>
+            <div style="display:flex;flex-direction:column;gap:6px;flex:1">
+              <div style="font-size:16px;line-height:22px;font-weight:600;color:#C42B1C">Your browser's cookies are locked</div>
+              <div style="font-size:14px;line-height:20px;color:#1B1B1B">Chrome is open and won't let another program read its cookie file. Close Chrome completely, then try again.</div>
+              <div style="display:flex;gap:8px;padding-top:2px">
+                <div style="height:32px;padding:0 14px;border-radius:4px;background:#005FB8;color:#fff;font-size:14px;font-weight:600;display:flex;align-items:center">Try again</div>
+                <div style="height:32px;padding:0 14px;border:1px solid #E0E0E0;border-radius:4px;background:#FBFBFB;display:flex;align-items:center;font-size:14px">Sign in here instead</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TOOLS MISSING -->
+      <div style="width:620px;display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:13px;font-weight:600;color:#3A3A3A">State 2 — Tools missing or broken</div>
+        <div style="background:#FFFFFF;border:1px solid #F2D98C;border-radius:8px;overflow:hidden">
+          <div style="height:4px;background:#9D5D00"></div>
+          <div style="padding:16px;display:flex;gap:12px">
+            <div style="width:20px;height:20px;border-radius:50%;background:#9D5D00;color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none;margin-top:2px">!</div>
+            <div style="display:flex;flex-direction:column;gap:10px;flex:1">
+              <div style="font-size:18px;line-height:24px;font-weight:600;color:#9D5D00">FFmpeg won't start</div>
+              <div style="font-size:14px;line-height:20px;color:#1B1B1B;text-wrap:pretty">The file <span style="font-family:'Cascadia Mono',Consolas,monospace;font-size:13px">tools\ffmpeg.exe</span> is there but Windows refuses to run it — usually a blocked download or antivirus quarantine. Burning and compressing are unavailable until it works. Downloading still works.</div>
+              <div style="border:1px solid #EDEDED;border-radius:6px;background:#FAFAFA;display:flex;flex-direction:column">
+                <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid #EDEDED">
+                  <div style="width:8px;height:8px;border-radius:50%;background:#C42B1C"></div><div style="font-size:14px;flex:1">ffmpeg</div><div style="font-size:12px;color:#C42B1C">Won't start</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid #EDEDED">
+                  <div style="width:8px;height:8px;border-radius:50%;background:#C42B1C"></div><div style="font-size:14px;flex:1">ffprobe</div><div style="font-size:12px;color:#C42B1C">Not found</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid #EDEDED">
+                  <div style="width:8px;height:8px;border-radius:50%;background:#0F7B0F"></div><div style="font-size:14px;flex:1">yt-dlp</div><div style="font-size:12px;color:#5E5E5E">2024.08.06</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;padding:8px 12px">
+                  <div style="width:8px;height:8px;border-radius:50%;background:#0F7B0F"></div><div style="font-size:14px;flex:1">deno</div><div style="font-size:12px;color:#5E5E5E">1.45.2</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:8px">
+                <div style="height:34px;padding:0 16px;border-radius:4px;background:#005FB8;color:#fff;font-size:14px;font-weight:600;display:flex;align-items:center">Locate FFmpeg…</div>
+                <div style="height:34px;padding:0 16px;border:1px solid #E0E0E0;border-radius:4px;background:#FBFBFB;display:flex;align-items:center;font-size:14px">Check again</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="font-size:12px;line-height:18px;color:#5E5E5E;text-wrap:pretty">Idle with broken tools puts this card at the top of the content area and dims the Start button; the footer dot turns red and reads "1 of 4 tools unavailable".</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ SPEC ============ -->
+  <div style="display:flex;flex-direction:column;gap:20px">
+    <div style="display:flex;align-items:baseline;gap:12px">
+      <div style="font-size:24px;line-height:32px;font-weight:600">6 · Tokens for XAML</div>
+      <div style="font-size:14px;color:#5E5E5E">Names follow WinUI resource keys where one already exists.</div>
+    </div>
+
+    <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start">
+
+      <div style="width:460px;background:#FFFFFF;border:1px solid #D8D8D8;border-radius:8px;padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div style="font-size:16px;font-weight:600">Type scale — Segoe UI Variable</div>
+        <div style="display:grid;grid-template-columns:1fr auto;gap:10px 16px;align-items:baseline;font-size:12px;color:#5E5E5E">
+          <div style="font-size:28px;line-height:36px;font-weight:600;color:#1B1B1B">Title</div><div>28 / 36 · Semibold — app title</div>
+          <div style="font-size:20px;line-height:28px;font-weight:600;color:#1B1B1B">Subtitle</div><div>20 / 28 · Semibold — dialog headings</div>
+          <div style="font-size:18px;line-height:24px;font-weight:600;color:#1B1B1B">Body Large</div><div>18 / 24 · Semibold — state headline</div>
+          <div style="font-size:14px;line-height:20px;font-weight:600;color:#1B1B1B">Body Strong</div><div>14 / 20 · Semibold — buttons, selected tab</div>
+          <div style="font-size:14px;line-height:20px;color:#1B1B1B">Body</div><div>14 / 20 — labels, fields, detail lines</div>
+          <div style="font-size:12px;line-height:16px;color:#1B1B1B">Caption</div><div>12 / 16 — figures, hints, footer</div>
+          <div style="font-size:12px;line-height:18px;font-family:'Cascadia Mono',Consolas,monospace;color:#1B1B1B">Mono</div><div>Cascadia Mono 12 / 18 — log, paths</div>
+        </div>
+        <div style="font-size:12px;line-height:18px;color:#5E5E5E;border-top:1px solid #EDEDED;padding-top:10px">Figures use <span style="font-weight:600">tabular numerals</span> so the percentage, speed and ETA don't jitter each tick.</div>
+      </div>
+
+      <div style="width:400px;background:#FFFFFF;border:1px solid #D8D8D8;border-radius:8px;padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div style="font-size:16px;font-weight:600">Spacing — 4 pt base</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:center;gap:12px"><div style="width:4px;height:12px;background:#005FB8"></div><div style="font-size:13px">4 — icon to label, inside chips</div></div>
+          <div style="display:flex;align-items:center;gap:12px"><div style="width:8px;height:12px;background:#005FB8"></div><div style="font-size:13px">8 — field to its Browse button</div></div>
+          <div style="display:flex;align-items:center;gap:12px"><div style="width:12px;height:12px;background:#005FB8"></div><div style="font-size:13px">12 — rows in a form grid</div></div>
+          <div style="display:flex;align-items:center;gap:12px"><div style="width:16px;height:12px;background:#005FB8"></div><div style="font-size:13px">16 — label to control, card padding (compact)</div></div>
+          <div style="display:flex;align-items:center;gap:12px"><div style="width:20px;height:12px;background:#005FB8"></div><div style="font-size:13px">20 — card padding</div></div>
+          <div style="display:flex;align-items:center;gap:12px"><div style="width:24px;height:12px;background:#005FB8"></div><div style="font-size:13px">24 — window side margins, tab gap</div></div>
+          <div style="display:flex;align-items:center;gap:12px"><div style="width:32px;height:12px;background:#005FB8"></div><div style="font-size:13px">32 — between major regions</div></div>
+        </div>
+        <div style="border-top:1px solid #EDEDED;padding-top:10px;display:flex;flex-direction:column;gap:4px;font-size:12px;line-height:18px;color:#5E5E5E">
+          <div>Window 960 × 720, resizable, minimum 880 × 640.</div>
+          <div>Form label column 150 px, fixed; controls take the rest.</div>
+          <div>All values are device-independent pixels, so 125% and 150% scaling are handled by WPF.</div>
+        </div>
+      </div>
+
+      <div style="width:460px;background:#FFFFFF;border:1px solid #D8D8D8;border-radius:8px;padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div style="font-size:16px;font-weight:600">Control sizes</div>
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:10px 16px;align-items:center;font-size:13px;color:#5E5E5E">
+          <div style="height:32px;padding:0 10px;border:1px solid #E0E0E0;border-bottom-color:#C4C4C4;border-radius:4px;background:#FDFDFD;display:flex;align-items:center;font-size:14px;color:#1B1B1B">TextBox</div><div>32 h · radius 4 · 10 px inset</div>
+          <div style="height:34px;padding:0 16px;border-radius:4px;background:#005FB8;color:#fff;font-size:14px;font-weight:600;display:flex;align-items:center;justify-self:start">Primary</div><div>34 h · radius 4 · 16 px inset</div>
+          <div style="height:32px;padding:0 16px;border:1px solid #E0E0E0;border-bottom-color:#C4C4C4;border-radius:4px;background:#FBFBFB;display:flex;align-items:center;font-size:14px;color:#1B1B1B;justify-self:start">Standard</div><div>32 h · radius 4</div>
+          <div style="height:28px;padding:0 12px;border:1px solid #E0E0E0;border-radius:4px;background:#FBFBFB;display:flex;align-items:center;font-size:12px;color:#1B1B1B;justify-self:start">Small</div><div>28 h — footer only</div>
+          <div style="width:80px;height:6px;border-radius:3px;background:#E5E5E5;overflow:hidden"><div style="width:60%;height:6px;background:#005FB8;border-radius:3px"></div></div><div>Progress 6 h in the state card, 4 h in the footer</div>
+          <div style="width:20px;height:20px;border-radius:4px;background:#005FB8;color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center">&#10003;</div><div>CheckBox 20 · RadioButton 20 · touch row 32</div>
+          <div style="width:120px;height:32px;border:1px solid #E0E0E0;border-bottom-color:#C4C4C4;border-radius:4px;background:#FDFDFD;display:flex;align-items:center;justify-content:space-between;padding:0 10px;font-size:14px;color:#1B1B1B"><div>ComboBox</div><div style="font-size:9px">&#9660;</div></div><div>32 h · min width 160</div>
+        </div>
+        <div style="font-size:12px;line-height:18px;color:#5E5E5E;border-top:1px solid #EDEDED;padding-top:10px">Cards use radius 8 and a 1 px stroke; overlays radius 8. Focus is the standard WinUI 2 px focus ring, unmodified.</div>
+      </div>
+
+      <div style="width:920px;background:#FFFFFF;border:1px solid #D8D8D8;border-radius:8px;padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div style="font-size:16px;font-weight:600">Colour tokens</div>
+        <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr 1.6fr;gap:0;font-size:13px">
+          <div style="padding:8px 10px;font-weight:600;border-bottom:1px solid #E5E5E5;color:#5E5E5E;font-size:12px">Token</div>
+          <div style="padding:8px 10px;font-weight:600;border-bottom:1px solid #E5E5E5;color:#5E5E5E;font-size:12px">Light</div>
+          <div style="padding:8px 10px;font-weight:600;border-bottom:1px solid #E5E5E5;color:#5E5E5E;font-size:12px">Dark</div>
+          <div style="padding:8px 10px;font-weight:600;border-bottom:1px solid #E5E5E5;color:#5E5E5E;font-size:12px">Used for</div>
+
+          <div style="padding:8px 10px;border-bottom:1px solid #F2F2F2">WindowBackground</div>
+          <div style="padding:8px 10px;border-bottom:1px solid #F2F2F2;display:flex;align-items:center;gap:8px"><div style="width:14px;height:14px;border-radius:3px;background:#F3F3F3;border:1px solid #D8D8D8"></div>#F3F3F3</div>
+          <div style="padding:8px 10px;border-bottom:1px solid #F2F2F2;display:flex;align-items:center;gap:8px"><div style="width:14px;height:14px;border-radius:3px;background:#1F1F1F"></div>#1F1F1F</div>
+          <div style="padding:8px 10px;border-bottom:1px solid #F2F2F2;color:#5E5E5E">Window body, Mica-friendly</div>
+
+          <div style="padding:8px 10px;border-bottom:1px solid #F2F2F2">CardBackground</div>
+          <div style="padding:8px 10px;border-bottom:1px solid #F2F2F2;display:flex;align-items:center;gap:8px"><div style="width:14px;height:14px;border-radius:3px;background:#FFFFFF;border:1px solid #D8D8D8"></div>#FFFFFF</div>
+          <div style="padding:8px 10px;border-bottom:1px solid #F2F2F2;display:flex;align-items:center;gap:8px"><div style="width:14px;height:14px;border-radius:3px;background:#2B2B2B"></div>#2B2B2B</div>
+          <div style="padding:8px 10px;border-bottom:1px solid #F2F2F2;color:#5E5E5E">Form card, state card</div>
+
+          <div style="padding:8px 10px;border-bottom:1px solid #F2F2F2">ControlFill</div>
+          <div style="padding:8px 10px;border-bottom:1px solid #F2F2F2;display:flex;align-items:center;gap:8px"><div style="width:14px;height:14px;border-radius:3px;background:#FDFDFD;border:1px solid #D8D8D8"></div>#FDFDFD</div>
+          <div style="padding:8px 10px;border-bottom:1px solid #F2F2F2;display:flex;align-items:center;gap:8px"><div style="width:14px;height:14px;border-radius:3px;background:#333333"></div>#333333</div>
+          <div style="padding:8px 10px;border-bottom:1px solid #F2F2F2;color:#5E5E5E">TextBox, ComboBox interiors</div>
+
+          <div style="padding:8px 10px;border-bottom:1px solid #F2F2F2">Stroke / Divider</div>
+          <div style="padding:8px 10px;border-bottom:1px solid #F2F2F2;display:flex;align-items:center;gap:8px"><div style="width:14px;height:14px;border-radius:3px;background:#E5E5E5"></div>#E5E5E5</div>
+          <div style="padding:8px 10px;border-bottom:1px solid #F2F2F2;display:flex;align-items:center;gap:8px"><div style="width:14px;height:14px;border-radius:3px;background:#383838"></div>#383838</div>
+          <div style="padding:8px 10px;border-bottom:1px solid #F2F2F2;color:#5E5E5E">Card and control borders</div>
+
+          <div style="padding:8px 10px;border-bottom:1px solid #F2F2F2">TextPrimary</div>
+          <div style="padding:8px 10px;border-bottom:1px solid #F2F2F2;display:flex;align-items:center;gap:8px"><div style="width:14px;height:14px;border-radius:3px;background:#1B1B1B"></div>#1B1B1B</div>
+          <div style="padding:8px 10px;border-bottom:1px solid #F2F2F2;display:flex;align-items:center;gap:8px"><div style="width:14px;height:14px;border-radius:3px;background:#FFFFFF;border:1px solid #D8D8D8"></div>#FFFFFF</div>
+          <div style="padding:8px 10px;border-bottom:1px solid #F2F2F2;color:#5E5E5E">Headlines, field values</div>
+
+          <div style="padding:8px 10px;border-bottom:1px solid #F2F2F2">TextSecondary</div>
+          <div style="padding:8px 10px;border-bottom:1px solid #F2F2F2;display:flex;align-items:center;gap:8px"><div style="width:14px;height:14px;border-radius:3px;background:#5E5E5E"></div>#5E5E5E</div>
+          <div style="padding:8px 10px;border-bottom:1px solid #F2F2F2;display:flex;align-items:center;gap:8px"><div style="width:14px;height:14px;border-radius:3px;background:#CFCFCF"></div>#CFCFCF</div>
+          <div style="padding:8px 10px;border-bottom:1px solid #F2F2F2;color:#5E5E5E">Detail lines, hints</div>
+
+          <div style="padding:8px 10px;border-bottom:1px solid #F2F2F2">Accent</div>
+          <div style="padding:8px 10px;border-bottom:1px solid #F2F2F2;display:flex;align-items:center;gap:8px"><div style="width:14px;height:14px;border-radius:3px;background:#005FB8"></div>#005FB8</div>
+          <div style="padding:8px 10px;border-bottom:1px solid #F2F2F2;display:flex;align-items:center;gap:8px"><div style="width:14px;height:14px;border-radius:3px;background:#60CDFF"></div>#60CDFF</div>
+          <div style="padding:8px 10px;border-bottom:1px solid #F2F2F2;color:#5E5E5E">Primary button, active step, progress fill. Follows the system accent when set.</div>
+
+          <div style="padding:8px 10px;border-bottom:1px solid #F2F2F2">Success</div>
+          <div style="padding:8px 10px;border-bottom:1px solid #F2F2F2;display:flex;align-items:center;gap:8px"><div style="width:14px;height:14px;border-radius:3px;background:#0F7B0F"></div>#0F7B0F</div>
+          <div style="padding:8px 10px;border-bottom:1px solid #F2F2F2;display:flex;align-items:center;gap:8px"><div style="width:14px;height:14px;border-radius:3px;background:#6CCB5F"></div>#6CCB5F</div>
+          <div style="padding:8px 10px;border-bottom:1px solid #F2F2F2;color:#5E5E5E">Started, completed steps, tools ready</div>
+
+          <div style="padding:8px 10px;border-bottom:1px solid #F2F2F2">Caution</div>
+          <div style="padding:8px 10px;border-bottom:1px solid #F2F2F2;display:flex;align-items:center;gap:8px"><div style="width:14px;height:14px;border-radius:3px;background:#9D5D00"></div>#9D5D00</div>
+          <div style="padding:8px 10px;border-bottom:1px solid #F2F2F2;display:flex;align-items:center;gap:8px"><div style="width:14px;height:14px;border-radius:3px;background:#F2C94C"></div>#F2C94C</div>
+          <div style="padding:8px 10px;border-bottom:1px solid #F2F2F2;color:#5E5E5E">Retrying, tools missing, overshot size target</div>
+
+          <div style="padding:8px 10px">Critical</div>
+          <div style="padding:8px 10px;display:flex;align-items:center;gap:8px"><div style="width:14px;height:14px;border-radius:3px;background:#C42B1C"></div>#C42B1C</div>
+          <div style="padding:8px 10px;display:flex;align-items:center;gap:8px"><div style="width:14px;height:14px;border-radius:3px;background:#FF99A4"></div>#FF99A4</div>
+          <div style="padding:8px 10px;color:#5E5E5E">Failures only. Never used for retry.</div>
+        </div>
+        <div style="font-size:12px;line-height:18px;color:#5E5E5E;border-top:1px solid #EDEDED;padding-top:10px;text-wrap:pretty">Tinted surfaces are the WinUI InfoBar backgrounds: success #DFF6DD / caution #FFF4CE / critical #FDE7E9 in light; #17301A / #3A2D14 / #442726 in dark. State colour never carries meaning alone — the headline verb changes with it, and each state keeps its own icon.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</x-dc>
+</body>
+</html>
