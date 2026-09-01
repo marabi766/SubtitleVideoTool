@@ -1,0 +1,45 @@
+# --- Build output ---
+/release/
+/Output/
+*.zip
+*.exe.tmp
+
+# --- Bundled third-party binaries (large, downloaded separately) ---
+# Verified with CHECKSUMS-SHA256.txt, not stored in Git.
+/tools/*.exe
+
+# --- Secrets / private session data (never commit) ---
+cookies.txt
+cookies*.txt
+*.cookies
+*cookies*.sqlite
+*.netscape
+/secrets/
+.env
+.env.*
+
+# --- Downloaded or generated media ---
+/downloads/
+*.mp4
+*.mkv
+*.webm
+*.mov
+*.m4v
+*.m4a
+*.mp3
+*.srt
+*.vtt
+*.ass
+*.part
+*.ytdl
+*.f???.*
+
+# --- Temporary / scratch ---
+/tmp/
+/temp/
+*.log
+*.tmp
+*.bak
+*~
+Thumbs.db
+desktop.ini
