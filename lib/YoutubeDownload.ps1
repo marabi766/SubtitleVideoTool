@@ -635,3 +635,233 @@ function Get-DownloadFailureMessage {
     }
     return $message
 }
+
+# ---------------------------------------------------------- progress reporting
+
+function ConvertTo-PersianDigit {
+    param(
+        [AllowEmptyString()][AllowNull()][string]$Text,
+        # Turns 42.3 into ۴۲٫۳ as well. Only a dot standing between two digits
+        # is touched, so file extensions and version strings are left alone.
+        [switch]$PersianDecimal
+    )
+
+    if ([string]::IsNullOrEmpty($Text)) { return '' }
+    if ($PersianDecimal) { $Text = $Text -replace '(?<=\d)\.(?=\d)', '٫' }
+    $builder = New-Object System.Text.StringBuilder
+    foreach ($character in $Text.ToCharArray()) {
+        if ($character -ge '0' -and $character -le '9') {
+            [void]$builder.Append([char]([int][char]'۰' + ([int][char]$character - [int][char]'0')))
+        }
+        else {
+            [void]$builder.Append($character)
+        }
+    }
+    return $builder.ToString()
+}
+
+function ConvertFrom-YtDlpOutputLine {
+    <#
+        Classifies one line of yt-dlp output. yt-dlp is started with --newline,
+        so every progress update arrives as its own complete line instead of a
+        carriage-return repaint, which is what makes live parsing possible.
+
+        Kind is one of: Empty, Destination, AlreadyDownloaded, Progress,
+        Merging, Subtitle, PostProcess, Info, Diagnostic, Other.
+    #>
+    param([AllowEmptyString()][AllowNull()][string]$Line)
+
+    $result = [pscustomobject]@{
+        Kind        = 'Other'
+        Percent     = $null
+        TotalText   = ''
+        SpeedText   = ''
+        EtaText     = ''
+        Fragment    = ''
+        Destination = ''
+        Line        = [string]$Line
+    }
+    if ([string]::IsNullOrWhiteSpace($Line)) {
+        $result.Kind = 'Empty'
+        return $result
+    }
+
+    $text = (Remove-InvisibleMark $Line).Trim()
+
+    $destination = [regex]::Match($text, '^\[download\]\s+Destination:\s*(?<path>.+?)\s*$')
+    if ($destination.Success) {
+        $result.Kind = 'Destination'
+        $result.Destination = $destination.Groups['path'].Value
+        return $result
+    }
+
+    $already = [regex]::Match($text, '^\[download\]\s+(?<path>.+?)\s+has already been downloaded\s*$')
+    if ($already.Success) {
+        $result.Kind = 'AlreadyDownloaded'
+        $result.Destination = $already.Groups['path'].Value
+        return $result
+    }
+
+    $percent = [regex]::Match($text, '^\[download\]\s+(?<pct>\d{1,3}(?:\.\d+)?)%')
+    if ($percent.Success) {
+        $result.Kind = 'Progress'
+        $value = [double]0
+        $parsed = [double]::TryParse(
+            $percent.Groups['pct'].Value,
+            [System.Globalization.NumberStyles]::Float,
+            [System.Globalization.CultureInfo]::InvariantCulture,
+            [ref]$value)
+        if ($parsed) {
+            if ($value -lt 0) { $value = 0 }
+            if ($value -gt 100) { $value = 100 }
+            $result.Percent = $value
+        }
+
+        # "of ~ 123.45MiB" appears when the size is only an estimate.
+        $total = [regex]::Match($text, '\bof\s+~?\s*(?<total>[\d.]+\s*(?:[KMGTP]i?)?B)')
+        if ($total.Success) { $result.TotalText = ($total.Groups['total'].Value -replace '\s+', '') }
+
+        $speed = [regex]::Match($text, '\bat\s+(?<speed>[\d.]+\s*(?:[KMGTP]i?)?B/s|Unknown\s*B/s)')
+        if ($speed.Success) { $result.SpeedText = ($speed.Groups['speed'].Value -replace '\s+', '') }
+
+        $eta = [regex]::Match($text, '\bETA\s+(?<eta>[\d:]+|Unknown)')
+        if ($eta.Success) { $result.EtaText = $eta.Groups['eta'].Value }
+
+        $fragment = [regex]::Match($text, '\(frag\s+(?<frag>\d+/\d+)\)')
+        if ($fragment.Success) { $result.Fragment = $fragment.Groups['frag'].Value }
+
+        return $result
+    }
+
+    if ($text -match '^\[Merger\]') { $result.Kind = 'Merging'; return $result }
+    if ($text -match '^\[SubtitlesConvertor\]' -or $text -match '(?i)^\[info\].*subtitle') { $result.Kind = 'Subtitle'; return $result }
+    if ($text -match '^\[(ExtractAudio|VideoConvertor|VideoRemuxer|Metadata|FixupM3u8|FixupM4a|EmbedSubtitle)\]') { $result.Kind = 'PostProcess'; return $result }
+    if ($text -match '^\[info\]\s') { $result.Kind = 'Info'; return $result }
+    if ($text -match '(?i)^(ERROR|WARNING):') { $result.Kind = 'Diagnostic'; return $result }
+    return $result
+}
+
+function Test-DownloadStartKind {
+    <#
+        The kinds that prove yt-dlp got past YouTube's checks and is actually
+        moving bytes; anything before this is still negotiation.
+    #>
+    param([AllowEmptyString()][AllowNull()][string]$Kind)
+    return (@('Progress', 'Destination', 'AlreadyDownloaded') -contains $Kind)
+}
+
+function Get-DownloadPartLabel {
+    <#
+        A merged MP4 is downloaded as separate video and audio streams, so the
+        percentage restarts from zero for each one. The part number keeps that
+        from looking like the download went backwards.
+    #>
+    param([int]$PartNumber = 0)
+
+    if ($PartNumber -le 1) { return 'در حال دانلود' }
+    if ($PartNumber -eq 2) { return 'در حال دانلود صدا' }
+    return ('در حال دانلود بخش ' + (ConvertTo-PersianDigit ([string]$PartNumber)))
+}
+
+function Format-DownloadProgressText {
+    param(
+        [Parameter(Mandatory)]$Progress,
+        [int]$PartNumber = 0
+    )
+
+    $segments = New-Object 'System.Collections.Generic.List[string]'
+    [void]$segments.Add((Get-DownloadPartLabel -PartNumber $PartNumber))
+
+    if ($null -ne $Progress.Percent) {
+        $rounded = [math]::Round([double]$Progress.Percent, 1)
+        $shown = $rounded.ToString([System.Globalization.CultureInfo]::InvariantCulture)
+        [void]$segments.Add((ConvertTo-PersianDigit $shown -PersianDecimal) + '٪')
+    }
+    if ($Progress.TotalText) { [void]$segments.Add('از ' + (ConvertTo-PersianDigit $Progress.TotalText -PersianDecimal)) }
+    if ($Progress.SpeedText -and $Progress.SpeedText -notmatch '(?i)unknown') {
+        [void]$segments.Add('سرعت ' + (ConvertTo-PersianDigit $Progress.SpeedText -PersianDecimal))
+    }
+    if ($Progress.EtaText -and $Progress.EtaText -notmatch '(?i)unknown') {
+        [void]$segments.Add('باقی‌مانده ' + (ConvertTo-PersianDigit $Progress.EtaText))
+    }
+    if ($Progress.Fragment) { [void]$segments.Add('قطعه ' + (ConvertTo-PersianDigit $Progress.Fragment)) }
+
+    return ($segments -join ' • ')
+}
+
+function Test-ProgressLogDue {
+    <#
+        Progress lines arrive several times a second. The log keeps one line per
+        LogStep percent (and always the final 100%) so it stays readable.
+    #>
+    param(
+        [AllowNull()]$Percent,
+        [double]$LastLoggedPercent = -1,
+        [double]$LogStep = 10
+    )
+
+    if ($null -eq $Percent) { return $false }
+    $value = [double]$Percent
+    if ($value -ge 100) { return ($LastLoggedPercent -lt 100) }
+    if ($LastLoggedPercent -lt 0) { return $true }
+    return (($value - $LastLoggedPercent) -ge $LogStep)
+}
+
+# -------------------------------------------------------- live output pumping
+
+function New-OutputPump {
+    <#
+        ReadLineAsync is polled by the caller instead of subscribing to
+        Process.OutputDataReceived, so every line is handed over on the caller's
+        own thread and the window is never touched from a thread pool thread.
+    #>
+    param([Parameter(Mandatory)][System.IO.StreamReader]$Reader)
+
+    return [pscustomobject]@{
+        Reader = $Reader
+        Task   = $Reader.ReadLineAsync()
+        Done   = $false
+    }
+}
+
+function Read-PendingPumpLine {
+    <#
+        Returns every line that has already arrived, without ever blocking: a
+        pump is read only while its task reports IsCompleted. Done is set when
+        the stream reaches end of file or the process is killed mid-read.
+    #>
+    param(
+        [AllowNull()][object[]]$Pumps,
+        [int]$MaxLines = 500
+    )
+
+    $lines = New-Object 'System.Collections.Generic.List[string]'
+    if (-not $Pumps -or $Pumps.Count -eq 0) { return $lines }
+
+    $progressed = $true
+    while ($progressed -and $lines.Count -lt $MaxLines) {
+        $progressed = $false
+        foreach ($pump in $Pumps) {
+            if ($pump.Done -or -not $pump.Task -or -not $pump.Task.IsCompleted) { continue }
+            $line = $null
+            try { $line = $pump.Task.Result }
+            catch { $pump.Done = $true; continue }
+            if ($null -eq $line) { $pump.Done = $true; continue }
+            [void]$lines.Add([string]$line)
+            try { $pump.Task = $pump.Reader.ReadLineAsync() }
+            catch { $pump.Done = $true; continue }
+            $progressed = $true
+        }
+    }
+    return $lines
+}
+
+function Test-PumpSetDrained {
+    param([AllowNull()][object[]]$Pumps)
+
+    if (-not $Pumps -or $Pumps.Count -eq 0) { return $true }
+    foreach ($pump in $Pumps) {
+        if (-not $pump.Done) { return $false }
+    }
+    return $true
+}

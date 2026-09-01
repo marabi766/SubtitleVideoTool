@@ -24,8 +24,10 @@ $script:DenoPath = $null
 $script:CurrentProcess = $null
 $script:CurrentToolName = $null
 $script:LastToolOutput = New-Object 'System.Collections.Generic.List[string]'
-$script:OutputTask = $null
-$script:ErrorTask = $null
+$script:StreamPumps = @()
+$script:DownloadAnnounced = $false
+$script:DownloadPart = 0
+$script:LastLoggedPercent = -1
 $script:StageQueue = New-Object System.Collections.Queue
 $script:CleanupPaths = @()
 $script:FinalOutput = $null
@@ -43,31 +45,120 @@ function Add-Log {
     param([string]$Message)
     if ([string]::IsNullOrWhiteSpace($Message)) { return }
     $timestamp = Get-Date -Format 'HH:mm:ss'
+    # A long verbose run would otherwise grow the box without bound; keep the
+    # newest part, which is the part that explains what just happened.
+    if ($txtLog.TextLength -gt 200000) { $txtLog.Text = $txtLog.Text.Substring($txtLog.TextLength - 100000) }
     $txtLog.AppendText("[$timestamp] $Message`r`n")
     $txtLog.SelectionStart = $txtLog.TextLength
     $txtLog.ScrollToCaret()
 }
 
+function Set-DownloadStatus {
+    param(
+        [AllowEmptyString()][string]$Text,
+        [System.Drawing.Color]$Color = [System.Drawing.Color]::DimGray
+    )
+    $lblDownloadStatus.Text = $Text
+    $lblDownloadStatus.ForeColor = $Color
+}
+
+function Confirm-DownloadStarted {
+    <#
+        Called the moment yt-dlp reports a destination file or a first
+        percentage: that is the earliest proof it got past YouTube's checks and
+        is really moving bytes, which is exactly what the window should say.
+    #>
+    param([AllowEmptyString()][string]$Destination)
+
+    if ($script:DownloadAnnounced) { return }
+    $script:DownloadAnnounced = $true
+    $message = 'دانلود با موفقیت آغاز شد'
+    if (-not [string]::IsNullOrWhiteSpace($Destination)) {
+        $message += ' — ' + (Split-Path -Leaf $Destination)
+    }
+    Add-Log $message
+    Set-DownloadStatus -Text $message -Color ([System.Drawing.Color]::FromArgb(20, 120, 75))
+}
+
+function Update-DownloadProgress {
+    # The parameter is deliberately not called $Progress: that name is already
+    # the progress bar control at script scope.
+    param([Parameter(Mandatory)]$ProgressInfo)
+
+    if (-not $script:DownloadAnnounced) { Confirm-DownloadStarted -Destination '' }
+    if ($null -eq $ProgressInfo.Percent) { return }
+
+    $percent = [int][math]::Round([double]$ProgressInfo.Percent)
+    if ($percent -lt 0) { $percent = 0 }
+    if ($percent -gt 100) { $percent = 100 }
+    if ($progress.Style -ne [System.Windows.Forms.ProgressBarStyle]::Blocks) {
+        $progress.MarqueeAnimationSpeed = 0
+        $progress.Style = [System.Windows.Forms.ProgressBarStyle]::Blocks
+    }
+    $progress.Value = $percent
+
+    $text = Format-DownloadProgressText -Progress $ProgressInfo -PartNumber $script:DownloadPart
+    Set-DownloadStatus -Text $text -Color ([System.Drawing.Color]::FromArgb(20, 90, 160))
+    $lblState.Text = (ConvertTo-PersianDigit ([string]$percent)) + '٪'
+
+    if (Test-ProgressLogDue -Percent $ProgressInfo.Percent -LastLoggedPercent $script:LastLoggedPercent) {
+        $script:LastLoggedPercent = [double]$ProgressInfo.Percent
+        Add-Log $text
+    }
+}
+
+function Write-ToolOutputLine {
+    <#
+        One line of live tool output. Progress lines drive the bar and the
+        status label only: writing several of them per second into the log
+        would bury the diagnostics that explain a failure.
+    #>
+    param([AllowEmptyString()][string]$Line)
+
+    if ([string]::IsNullOrWhiteSpace($Line)) { return }
+    $parsed = ConvertFrom-YtDlpOutputLine -Line $Line
+
+    if ($parsed.Kind -eq 'Progress') {
+        Update-DownloadProgress -ProgressInfo $parsed
+        return
+    }
+
+    $script:LastToolOutput.Add($Line)
+    while ($script:LastToolOutput.Count -gt 400) { $script:LastToolOutput.RemoveAt(0) }
+
+    if (Test-DownloadStartKind -Kind $parsed.Kind) {
+        $script:DownloadPart++
+        $script:LastLoggedPercent = -1
+        Confirm-DownloadStarted -Destination $parsed.Destination
+    }
+    elseif ($parsed.Kind -eq 'Merging') {
+        Set-DownloadStatus -Text 'ادغام تصویر و صدا' -Color ([System.Drawing.Color]::FromArgb(20, 90, 160))
+    }
+    elseif ($parsed.Kind -eq 'Subtitle') {
+        Set-DownloadStatus -Text 'پردازش زیرنویس' -Color ([System.Drawing.Color]::FromArgb(20, 90, 160))
+    }
+
+    Add-Log $Line
+}
+
+function Show-PendingToolOutput {
+    foreach ($line in (Read-PendingPumpLine -Pumps $script:StreamPumps)) { Write-ToolOutputLine $line }
+}
+
 function Collect-ProcessOutput {
-    $capturedText = @()
-    try {
-        if ($script:OutputTask) { $capturedText += [string]$script:OutputTask.Result }
-        if ($script:ErrorTask) { $capturedText += [string]$script:ErrorTask.Result }
+    <#
+        Drains whatever the tool wrote between the last tick and its exit. The
+        pipes close within milliseconds of the process ending, so the bounded
+        wait below is a safety net rather than the normal path.
+    #>
+    $deadline = (Get-Date).AddSeconds(5)
+    while (-not (Test-PumpSetDrained -Pumps $script:StreamPumps) -and (Get-Date) -lt $deadline) {
+        Show-PendingToolOutput
+        if (Test-PumpSetDrained -Pumps $script:StreamPumps) { break }
+        Start-Sleep -Milliseconds 20
     }
-    catch {
-        $capturedText += ('خطا در خواندن گزارش ابزار: ' + $_.Exception.Message)
-    }
-    foreach ($text in $capturedText) {
-        foreach ($line in ($text -split "`r?`n")) {
-            if (-not [string]::IsNullOrWhiteSpace($line)) {
-                $script:LastToolOutput.Add($line)
-                while ($script:LastToolOutput.Count -gt 200) { $script:LastToolOutput.RemoveAt(0) }
-                Add-Log $line
-            }
-        }
-    }
-    $script:OutputTask = $null
-    $script:ErrorTask = $null
+    Show-PendingToolOutput
+    $script:StreamPumps = @()
 }
 
 function Select-InputFile {
@@ -248,10 +339,13 @@ function Set-UiBusy {
     $btnLocateTools.Enabled = -not $Busy
     $btnCancel.Enabled = $Busy
     if ($Busy) {
+        # Marquee until the first real percentage arrives; Update-DownloadProgress
+        # switches the bar to Blocks as soon as it knows how far along it is.
         $progress.Style = [System.Windows.Forms.ProgressBarStyle]::Marquee
         $progress.MarqueeAnimationSpeed = 25
     }
     else {
+        $progress.MarqueeAnimationSpeed = 0
         $progress.Style = [System.Windows.Forms.ProgressBarStyle]::Blocks
         $progress.Value = 0
     }
@@ -284,6 +378,7 @@ function Complete-Operation {
         }
         Add-Log 'عملیات لغو شد'
         $lblState.Text = 'لغو شد'
+        Set-DownloadStatus -Text 'عملیات لغو شد'
         $script:Cancelled = $false
         return
     }
@@ -294,6 +389,7 @@ function Complete-Operation {
         }
         Add-Log ("خطا: " + $FailureMessage)
         $lblState.Text = 'عملیات ناموفق بود'
+        Set-DownloadStatus -Text 'عملیات ناموفق بود' -Color ([System.Drawing.Color]::Firebrick)
         [System.Windows.Forms.MessageBox]::Show(
             $FailureMessage,
             'خطا',
@@ -313,6 +409,7 @@ function Complete-Operation {
         if (-not $videoFile) {
             Add-Log 'دانلود پایان یافت، اما فایل ویدیویی جدید شناسایی نشد'
             $lblState.Text = 'فایل خروجی پیدا نشد'
+            Set-DownloadStatus -Text 'فایل خروجی پیدا نشد' -Color ([System.Drawing.Color]::Firebrick)
             [System.Windows.Forms.MessageBox]::Show('yt-dlp بدون خطا پایان یافت، اما فایل ویدیویی جدید در پوشهٔ خروجی پیدا نشد.', 'خروجی پیدا نشد', [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Warning) | Out-Null
             return
         }
@@ -340,6 +437,8 @@ function Complete-Operation {
     }
     Add-Log ($script:SuccessMessage + $(if ($extra) { ' — ' + $extra.Trim() } else { '' }))
     $lblState.Text = 'انجام شد'
+    $progress.Value = $progress.Maximum
+    Set-DownloadStatus -Text $script:SuccessMessage -Color ([System.Drawing.Color]::FromArgb(20, 120, 75))
     [System.Windows.Forms.MessageBox]::Show(
         ($script:SuccessMessage + $extra + "`r`n`r`n" + $script:FinalOutput),
         'عملیات موفق',
@@ -380,9 +479,12 @@ function Start-NextStage {
     try {
         [void]$process.Start()
         $script:CurrentProcess = $process
+        $script:StreamPumps = @()
         if ($captureOutput) {
-            $script:OutputTask = $process.StandardOutput.ReadToEndAsync()
-            $script:ErrorTask = $process.StandardError.ReadToEndAsync()
+            $script:StreamPumps = @(
+                (Start-OutputPump -Reader $process.StandardOutput),
+                (Start-OutputPump -Reader $process.StandardError)
+            )
         }
     }
     catch {
@@ -409,8 +511,11 @@ function Start-OperationQueue {
     $script:OperationKind = $OperationKind
     $script:Cancelled = $false
     $script:LastToolOutput.Clear()
-    $script:OutputTask = $null
-    $script:ErrorTask = $null
+    $script:StreamPumps = @()
+    $script:DownloadAnnounced = $false
+    $script:DownloadPart = 0
+    $script:LastLoggedPercent = -1
+    Set-DownloadStatus -Text 'در حال آماده‌سازی…'
     Set-UiBusy $true
     $timer.Start()
     Start-NextStage
@@ -431,8 +536,8 @@ if (Test-Path -LiteralPath $appIconPath -PathType Leaf) {
     $form.Icon = $script:AppIcon
 }
 $form.StartPosition = 'CenterScreen'
-$form.Size = New-Object System.Drawing.Size(900, 720)
-$form.MinimumSize = New-Object System.Drawing.Size(900, 720)
+$form.Size = New-Object System.Drawing.Size(900, 756)
+$form.MinimumSize = New-Object System.Drawing.Size(900, 756)
 $form.Font = New-Object System.Drawing.Font('Segoe UI', 10)
 $form.RightToLeft = [System.Windows.Forms.RightToLeft]::Yes
 $form.RightToLeftLayout = $true
@@ -903,9 +1008,18 @@ $btnCancel.Size = New-Object System.Drawing.Size(150, 32)
 $btnCancel.Enabled = $false
 $form.Controls.Add($btnCancel)
 
+$lblDownloadStatus = New-Object System.Windows.Forms.Label
+$lblDownloadStatus.Text = ''
+$lblDownloadStatus.Location = New-Object System.Drawing.Point(18, 562)
+$lblDownloadStatus.Size = New-Object System.Drawing.Size(848, 26)
+$lblDownloadStatus.ForeColor = [System.Drawing.Color]::DimGray
+$lblDownloadStatus.Font = New-Object System.Drawing.Font('Segoe UI', 10, [System.Drawing.FontStyle]::Bold)
+$lblDownloadStatus.Anchor = 'Top,Left,Right'
+$form.Controls.Add($lblDownloadStatus)
+
 $txtLog = New-Object System.Windows.Forms.TextBox
-$txtLog.Location = New-Object System.Drawing.Point(18, 568)
-$txtLog.Size = New-Object System.Drawing.Size(848, 100)
+$txtLog.Location = New-Object System.Drawing.Point(18, 592)
+$txtLog.Size = New-Object System.Drawing.Size(848, 108)
 $txtLog.Multiline = $true
 $txtLog.ScrollBars = 'Vertical'
 $txtLog.ReadOnly = $true
@@ -917,6 +1031,10 @@ $form.Controls.Add($txtLog)
 $timer = New-Object System.Windows.Forms.Timer
 $timer.Interval = 300
 $timer.Add_Tick({
+    # Show whatever the tool has written so far, so the log and the progress
+    # bar move while the download runs instead of only after it finishes.
+    Show-PendingToolOutput
+
     if ($script:CurrentProcess -and $script:CurrentProcess.HasExited) {
         $script:CurrentProcess.WaitForExit()
         $exitCode = $script:CurrentProcess.ExitCode
@@ -936,6 +1054,14 @@ $timer.Add_Tick({
             if ($canRetryAnotherClient) {
                 $nextStage = $script:YoutubeFallbackStages.Dequeue()
                 Add-Log 'روش فعلی توسط YouTube رد شد؛ تلاش خودکار با کلاینت سازگار جایگزین آغاز می‌شود'
+                # The retry starts from nothing: keeping the rejected attempt's
+                # output would make the next failure be classified by the old text.
+                $script:LastToolOutput.Clear()
+                $script:DownloadAnnounced = $false
+                $script:DownloadPart = 0
+                $script:LastLoggedPercent = -1
+                Set-DownloadStatus -Text 'تلاش دوباره با روش جایگزین…'
+                Set-UiBusy $true
                 $script:StageQueue.Enqueue($nextStage)
                 Start-NextStage
             }
@@ -1119,7 +1245,7 @@ $btnYoutubeDownload.Add_Click({
             Executable = $script:YtDlpPath
             Arguments = (New-YtDlpArgument @argumentSplat)
         }
-        Add-Log 'دانلود یوتیوب آغاز شد؛ گزارش کامل yt-dlp پس از پایان همین‌جا نمایش داده می‌شود'
+        Add-Log 'درخواست دانلود به yt-dlp داده شد؛ گزارش و درصد پیشرفت به‌صورت زنده همین‌جا نمایش داده می‌شود'
         Start-OperationQueue -Stages @($stage) -SuccessMessage 'دانلود ویدیو و زیرنویس کامل شد' -OutputPath $downloadFolder -OperationKind 'youtube'
     }
     catch {

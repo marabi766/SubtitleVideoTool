@@ -454,6 +454,138 @@ Assert-True -Name 'پیام خطا راهنمای فارسی دارد' -Value ($
 Assert-True -Name 'پیام خطا محدودیت یوتیوب را جدا می‌کند' -Value ($failureMessage -like '*سمت YouTube*')
 Assert-True -Name 'پیام خطا گزارش ابزار را دارد' -Value ($failureMessage.Contains('ERROR: [youtube] abc'))
 
+# ------------------------------------------------- live progress from yt-dlp
+
+Start-TestGroup 'خواندن زندهٔ پیشرفت دانلود'
+
+$destinationLine = ConvertFrom-YtDlpOutputLine -Line '[download] Destination: D:\Videos\Sample Title [dQw4w9WgXcQ].f137.mp4'
+Assert-Equal -Name 'تشخیص سطر مقصد' -Expected 'Destination' -Actual $destinationLine.Kind
+Assert-Equal -Name 'مسیر مقصد استخراج می‌شود' -Expected 'D:\Videos\Sample Title [dQw4w9WgXcQ].f137.mp4' -Actual $destinationLine.Destination
+
+$alreadyLine = ConvertFrom-YtDlpOutputLine -Line '[download] D:\Videos\Sample.mp4 has already been downloaded'
+Assert-Equal -Name 'تشخیص فایل از پیش دانلودشده' -Expected 'AlreadyDownloaded' -Actual $alreadyLine.Kind
+
+$startingLine = ConvertFrom-YtDlpOutputLine -Line '[download]   0.0% of  123.45MiB at  Unknown B/s ETA Unknown'
+Assert-Equal -Name 'تشخیص سطر پیشرفت' -Expected 'Progress' -Actual $startingLine.Kind
+Assert-Equal -Name 'درصد صفر خوانده می‌شود' -Expected '0' -Actual $startingLine.Percent
+Assert-Equal -Name 'حجم کل خوانده می‌شود' -Expected '123.45MiB' -Actual $startingLine.TotalText
+Assert-Equal -Name 'سرعت نامعلوم خوانده می‌شود' -Expected 'UnknownB/s' -Actual $startingLine.SpeedText
+Assert-Equal -Name 'زمان باقی‌مانده نامعلوم خوانده می‌شود' -Expected 'Unknown' -Actual $startingLine.EtaText
+
+$midLine = ConvertFrom-YtDlpOutputLine -Line '[download]  42.3% of ~ 500.00MiB at    1.23MiB/s ETA 05:09 (frag 12/100)'
+Assert-Equal -Name 'درصد اعشاری خوانده می‌شود' -Expected '42.3' -Actual $midLine.Percent
+Assert-Equal -Name 'حجم تخمینی خوانده می‌شود' -Expected '500.00MiB' -Actual $midLine.TotalText
+Assert-Equal -Name 'سرعت خوانده می‌شود' -Expected '1.23MiB/s' -Actual $midLine.SpeedText
+Assert-Equal -Name 'زمان باقی‌مانده خوانده می‌شود' -Expected '05:09' -Actual $midLine.EtaText
+Assert-Equal -Name 'شمارهٔ قطعه خوانده می‌شود' -Expected '12/100' -Actual $midLine.Fragment
+
+$finishedLine = ConvertFrom-YtDlpOutputLine -Line '[download] 100% of  123.45MiB in 00:12'
+Assert-Equal -Name 'درصد صد خوانده می‌شود' -Expected '100' -Actual $finishedLine.Percent
+
+$mergeLine = ConvertFrom-YtDlpOutputLine -Line '[Merger] Merging formats into "D:\Videos\Sample.mp4"'
+Assert-Equal -Name 'تشخیص ادغام' -Expected 'Merging' -Actual $mergeLine.Kind
+
+$subtitleLine = ConvertFrom-YtDlpOutputLine -Line '[SubtitlesConvertor] Converting subtitles'
+Assert-Equal -Name 'تشخیص زیرنویس' -Expected 'Subtitle' -Actual $subtitleLine.Kind
+
+$errorLine = ConvertFrom-YtDlpOutputLine -Line 'ERROR: [youtube] abc: Video unavailable'
+Assert-Equal -Name 'تشخیص سطر خطا' -Expected 'Diagnostic' -Actual $errorLine.Kind
+
+Assert-Equal -Name 'سطر خالی' -Expected 'Empty' -Actual (ConvertFrom-YtDlpOutputLine -Line '   ').Kind
+Assert-Equal -Name 'سطر ناشناخته' -Expected 'Other' -Actual (ConvertFrom-YtDlpOutputLine -Line 'random text').Kind
+
+# A verbose debug line must never be mistaken for progress, or the bar would
+# jump around on text that has nothing to do with the download.
+Assert-Equal -Name 'سطر اشکال‌زدایی پیشرفت نیست' -Expected 'Other' -Actual (ConvertFrom-YtDlpOutputLine -Line '[debug] 100% something').Kind
+
+Assert-True -Name 'مقصد شروع دانلود شمرده می‌شود' -Value (Test-DownloadStartKind -Kind 'Destination')
+Assert-True -Name 'پیشرفت شروع دانلود شمرده می‌شود' -Value (Test-DownloadStartKind -Kind 'Progress')
+Assert-False -Name 'سطر اطلاعات شروع دانلود نیست' -Value (Test-DownloadStartKind -Kind 'Info')
+
+Assert-Equal -Name 'تبدیل رقم انگلیسی به فارسی' -Expected '۴۲۵' -Actual (ConvertTo-PersianDigit '425')
+Assert-Equal -Name 'حروف غیرعددی دست‌نخورده می‌مانند' -Expected 'MiB/s' -Actual (ConvertTo-PersianDigit 'MiB/s')
+Assert-Equal -Name 'ممیز فارسی فقط با سوییچ اعمال می‌شود' -Expected '۴۲.۳' -Actual (ConvertTo-PersianDigit '42.3')
+Assert-Equal -Name 'ممیز فارسی بین دو رقم' -Expected '۴۲٫۳' -Actual (ConvertTo-PersianDigit '42.3' -PersianDecimal)
+Assert-Equal -Name 'نقطهٔ غیرعددی ممیز نمی‌شود' -Expected 'sample.mp۴' -Actual (ConvertTo-PersianDigit 'sample.mp4' -PersianDecimal)
+
+$progressText = Format-DownloadProgressText -Progress $midLine -PartNumber 1
+Assert-True -Name 'متن پیشرفت درصد دارد' -Value ($progressText -like '*۴۲٫۳٪*')
+Assert-True -Name 'متن پیشرفت سرعت دارد' -Value ($progressText -like '*سرعت*')
+Assert-True -Name 'متن پیشرفت زمان باقی‌مانده دارد' -Value ($progressText -like '*باقی‌مانده*')
+
+$unknownText = Format-DownloadProgressText -Progress $startingLine -PartNumber 1
+Assert-False -Name 'سرعت نامعلوم نمایش داده نمی‌شود' -Value ($unknownText -like '*سرعت*')
+Assert-False -Name 'زمان نامعلوم نمایش داده نمی‌شود' -Value ($unknownText -like '*باقی‌مانده*')
+
+Assert-Equal -Name 'برچسب بخش نخست' -Expected 'در حال دانلود' -Actual (Get-DownloadPartLabel -PartNumber 1)
+Assert-Equal -Name 'برچسب بخش صدا' -Expected 'در حال دانلود صدا' -Actual (Get-DownloadPartLabel -PartNumber 2)
+Assert-True -Name 'برچسب بخش سوم شماره دارد' -Value ((Get-DownloadPartLabel -PartNumber 3) -like '*۳*')
+
+Assert-True -Name 'نخستین درصد در گزارش ثبت می‌شود' -Value (Test-ProgressLogDue -Percent 0 -LastLoggedPercent -1)
+Assert-False -Name 'درصد نزدیک ثبت نمی‌شود' -Value (Test-ProgressLogDue -Percent 12 -LastLoggedPercent 10)
+Assert-True -Name 'گام ده‌درصدی ثبت می‌شود' -Value (Test-ProgressLogDue -Percent 20 -LastLoggedPercent 10)
+Assert-True -Name 'پایان کار همیشه ثبت می‌شود' -Value (Test-ProgressLogDue -Percent 100 -LastLoggedPercent 95)
+Assert-False -Name 'پایان کار دوبار ثبت نمی‌شود' -Value (Test-ProgressLogDue -Percent 100 -LastLoggedPercent 100)
+Assert-False -Name 'سطر بدون درصد ثبت نمی‌شود' -Value (Test-ProgressLogDue -Percent $null -LastLoggedPercent 10)
+
+# ------------------------------------------------ pumping a real child process
+
+Start-TestGroup 'خواندن خروجی زندهٔ یک پردازش واقعی'
+
+Assert-True -Name 'مجموعهٔ خالی تخلیه‌شده است' -Value (Test-PumpSetDrained -Pumps @())
+Assert-Equal -Name 'مجموعهٔ خالی سطری نمی‌دهد' -Expected 0 -Actual (Read-PendingPumpLine -Pumps $null).Count
+
+# A real child process is used on purpose: the whole point of the pump is that
+# ReadLineAsync can be polled without blocking, which a fake reader cannot show.
+$childScript = Join-Path $script:FixtureRoot 'emit.ps1'
+Set-Content -LiteralPath $childScript -Encoding UTF8 -Value @'
+[Console]::Out.WriteLine('[download] Destination: C:\out\Sample.f137.mp4')
+[Console]::Out.WriteLine('[download]  10.0% of  100.00MiB at 1.00MiB/s ETA 01:30')
+[Console]::Error.WriteLine('WARNING: an example warning')
+[Console]::Out.WriteLine('[download] 100% of  100.00MiB in 00:20')
+'@
+
+$childInfo = New-Object System.Diagnostics.ProcessStartInfo
+$childInfo.FileName = (Get-Process -Id $PID).Path
+$childInfo.Arguments = Join-ProcessArguments @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $childScript)
+$childInfo.UseShellExecute = $false
+$childInfo.CreateNoWindow = $true
+$childInfo.RedirectStandardOutput = $true
+$childInfo.RedirectStandardError = $true
+$childInfo.StandardOutputEncoding = [System.Text.Encoding]::UTF8
+$childInfo.StandardErrorEncoding = [System.Text.Encoding]::UTF8
+
+$child = New-Object System.Diagnostics.Process
+$child.StartInfo = $childInfo
+[void]$child.Start()
+
+$pumps = @(
+    (New-OutputPump -Reader $child.StandardOutput),
+    (New-OutputPump -Reader $child.StandardError)
+)
+Assert-False -Name 'مجموعهٔ فعال هنوز تخلیه نشده' -Value (Test-PumpSetDrained -Pumps $pumps)
+
+$collected = New-Object 'System.Collections.Generic.List[string]'
+$deadline = (Get-Date).AddSeconds(30)
+while (-not (Test-PumpSetDrained -Pumps $pumps) -and (Get-Date) -lt $deadline) {
+    foreach ($line in (Read-PendingPumpLine -Pumps $pumps)) { [void]$collected.Add($line) }
+    if (Test-PumpSetDrained -Pumps $pumps) { break }
+    Start-Sleep -Milliseconds 20
+}
+[void]$child.WaitForExit(10000)
+$child.Dispose()
+
+Assert-True -Name 'هر دو جریان تا انتها خوانده شدند' -Value (Test-PumpSetDrained -Pumps $pumps)
+Assert-Equal -Name 'همهٔ چهار سطر دریافت شد' -Expected 4 -Actual $collected.Count
+Assert-True -Name 'سطر خطای استاندارد هم دریافت شد' -Value ($collected -contains 'WARNING: an example warning')
+
+$parsedLines = @($collected | ForEach-Object { ConvertFrom-YtDlpOutputLine -Line $_ })
+$firstStart = @($parsedLines | Where-Object { Test-DownloadStartKind -Kind $_.Kind }) | Select-Object -First 1
+Assert-True -Name 'آغاز دانلود از جریان زنده تشخیص داده شد' -Value ($null -ne $firstStart)
+$percentages = @($parsedLines | Where-Object { $_.Kind -eq 'Progress' } | ForEach-Object { $_.Percent })
+Assert-Equal -Name 'دو سطر پیشرفت خوانده شد' -Expected 2 -Actual $percentages.Count
+Assert-Equal -Name 'آخرین درصد صد است' -Expected '100' -Actual $percentages[-1]
+
 }
 finally {
     if (Test-Path -LiteralPath $script:FixtureRoot) {
