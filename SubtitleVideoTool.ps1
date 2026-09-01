@@ -6,6 +6,17 @@ Add-Type -AssemblyName System.Drawing
 [System.Windows.Forms.Application]::EnableVisualStyles()
 
 $script:AppRoot = if ($PSScriptRoot) { $PSScriptRoot } elseif ($global:LauncherRoot) { $global:LauncherRoot.TrimEnd('\') } else { (Get-Location).Path }
+$script:CoreLibrary = Join-Path (Join-Path $script:AppRoot 'lib') 'YoutubeDownload.ps1'
+if (-not (Test-Path -LiteralPath $script:CoreLibrary -PathType Leaf)) {
+    [System.Windows.Forms.MessageBox]::Show(
+        ("فایل ضروری برنامه پیدا نشد:`r`n" + $script:CoreLibrary),
+        'فایل ناقص',
+        [System.Windows.Forms.MessageBoxButtons]::OK,
+        [System.Windows.Forms.MessageBoxIcon]::Error) | Out-Null
+    exit 1
+}
+. $script:CoreLibrary
+
 $script:FfmpegPath = $null
 $script:FfprobePath = $null
 $script:YtDlpPath = $null
@@ -24,67 +35,9 @@ $script:Cancelled = $false
 $script:OperationKind = 'media'
 $script:DownloadFolder = $null
 $script:DownloadStarted = $null
-$script:YoutubeFallbackStage = $null
-$script:YoutubeFallbackAttempted = $false
+$script:YoutubeFallbackStages = New-Object System.Collections.Queue
 $script:SubtitleColor = [System.Drawing.Color]::White
 $script:BackgroundColor = [System.Drawing.Color]::Black
-
-function Resolve-Executable {
-    param([Parameter(Mandatory)][string]$Name)
-
-    $bundled = Join-Path (Join-Path $script:AppRoot 'tools') ($Name + '.exe')
-    if (Test-Path -LiteralPath $bundled -PathType Leaf) {
-        return (Get-Item -LiteralPath $bundled).FullName
-    }
-
-    $besideApp = Join-Path $script:AppRoot ($Name + '.exe')
-    if (Test-Path -LiteralPath $besideApp -PathType Leaf) {
-        return (Get-Item -LiteralPath $besideApp).FullName
-    }
-
-    $command = Get-Command ($Name + '.exe') -ErrorAction SilentlyContinue | Select-Object -First 1
-    if (-not $command) {
-        $command = Get-Command $Name -ErrorAction SilentlyContinue | Select-Object -First 1
-    }
-    if ($command) { return $command.Source }
-    return $null
-}
-
-function Quote-WindowsArgument {
-    param([AllowEmptyString()][string]$Value)
-
-    if ($null -eq $Value -or $Value.Length -eq 0) { return '""' }
-    if ($Value -notmatch '[\s"]') { return $Value }
-
-    $builder = New-Object System.Text.StringBuilder
-    [void]$builder.Append('"')
-    $backslashes = 0
-    foreach ($character in $Value.ToCharArray()) {
-        if ($character -eq '\') {
-            $backslashes++
-            continue
-        }
-        if ($character -eq '"') {
-            [void]$builder.Append(('\' * (($backslashes * 2) + 1)))
-            [void]$builder.Append('"')
-            $backslashes = 0
-            continue
-        }
-        if ($backslashes -gt 0) {
-            [void]$builder.Append(('\' * $backslashes))
-            $backslashes = 0
-        }
-        [void]$builder.Append($character)
-    }
-    if ($backslashes -gt 0) { [void]$builder.Append(('\' * ($backslashes * 2))) }
-    [void]$builder.Append('"')
-    return $builder.ToString()
-}
-
-function Join-ProcessArguments {
-    param([Parameter(Mandatory)][object[]]$Values)
-    return (($Values | ForEach-Object { Quote-WindowsArgument ([string]$_) }) -join ' ')
-}
 
 function Add-Log {
     param([string]$Message)
@@ -166,27 +119,51 @@ function Select-OutputFolder {
 }
 
 function Test-Tools {
-    $script:FfmpegPath = Resolve-Executable 'ffmpeg'
-    $script:FfprobePath = Resolve-Executable 'ffprobe'
-    $script:YtDlpPath = Resolve-Executable 'yt-dlp'
-    $script:DenoPath = Resolve-Executable 'deno'
-    $ready = $script:FfmpegPath -and $script:FfprobePath
+    <#
+        Existence is not enough: a truncated tools\*.exe passes Test-Path but
+        Windows refuses to start it, and yt-dlp then silently behaves as if
+        FFmpeg were absent. Every tool is launched once with its version flag.
+    #>
+    $status = @(Get-ToolStatus -Names @('ffmpeg', 'ffprobe', 'yt-dlp', 'deno') -AppRoot $script:AppRoot)
+    $byName = @{}
+    foreach ($row in $status) { $byName[$row.Name] = $row }
+
+    $script:FfmpegPath = $null
+    $script:FfprobePath = $null
+    $script:YtDlpPath = $null
+    $script:DenoPath = $null
+    if ($byName['ffmpeg'].IsRunnable) { $script:FfmpegPath = $byName['ffmpeg'].Path }
+    if ($byName['ffprobe'].IsRunnable) { $script:FfprobePath = $byName['ffprobe'].Path }
+    if ($byName['yt-dlp'].IsRunnable) { $script:YtDlpPath = $byName['yt-dlp'].Path }
+    if ($byName['deno'].IsRunnable) { $script:DenoPath = $byName['deno'].Path }
+
+    foreach ($row in $status) {
+        if ($row.IsPresent -and -not $row.IsRunnable) { Add-Log $row.Reason }
+    }
+
+    $ready = [bool]($script:FfmpegPath -and $script:FfprobePath)
     if ($ready -and $script:YtDlpPath -and $script:DenoPath) {
         $lblTools.Text = 'FFmpeg، FFprobe، yt-dlp و Deno آماده‌اند'
         $lblTools.ForeColor = [System.Drawing.Color]::FromArgb(20, 120, 75)
         $lblTools.Tag = $true
     }
     elseif ($ready) {
-        $lblTools.Text = 'ابزارهای ویدیو آماده‌اند؛ yt-dlp یا Deno پیدا نشد'
+        $lblTools.Text = 'ابزارهای ویدیو آماده‌اند؛ yt-dlp یا Deno سالم نیست'
         $lblTools.ForeColor = [System.Drawing.Color]::DarkOrange
         $lblTools.Tag = $true
     }
     else {
-        $lblTools.Text = 'FFmpeg یا FFprobe پیدا نشد؛ پوشهٔ tools را بررسی کنید'
+        $broken = @($status | Where-Object { $_.IsPresent -and -not $_.IsRunnable } | ForEach-Object { $_.Name })
+        if ($broken.Count -gt 0) {
+            $lblTools.Text = ('این ابزار خراب یا ناقص است: ' + ($broken -join '، ') + ' — دوباره تهیه کنید')
+        }
+        else {
+            $lblTools.Text = 'FFmpeg یا FFprobe پیدا نشد؛ پوشهٔ tools را بررسی کنید'
+        }
         $lblTools.ForeColor = [System.Drawing.Color]::Firebrick
         $lblTools.Tag = $false
     }
-    return [bool]$ready
+    return $ready
 }
 
 function Get-ProbeData {
@@ -204,6 +181,8 @@ function Get-ProbeData {
     $startInfo.CreateNoWindow = $true
     $startInfo.RedirectStandardOutput = $true
     $startInfo.RedirectStandardError = $true
+    $startInfo.StandardOutputEncoding = [System.Text.Encoding]::UTF8
+    $startInfo.StandardErrorEncoding = [System.Text.Encoding]::UTF8
 
     $process = New-Object System.Diagnostics.Process
     $process.StartInfo = $startInfo
@@ -388,6 +367,12 @@ function Start-NextStage {
     $captureOutput = ($stage.PSObject.Properties.Name -contains 'CaptureOutput') -and [bool]$stage.CaptureOutput
     $startInfo.RedirectStandardError = $captureOutput
     $startInfo.RedirectStandardOutput = $captureOutput
+    if ($captureOutput) {
+        # yt-dlp and ffmpeg write UTF-8 to a redirected pipe; without this the
+        # console code page mangles Persian titles and hides the real error text.
+        $startInfo.StandardOutputEncoding = [System.Text.Encoding]::UTF8
+        $startInfo.StandardErrorEncoding = [System.Text.Encoding]::UTF8
+    }
 
     $process = New-Object System.Diagnostics.Process
     $process.StartInfo = $startInfo
@@ -839,16 +824,18 @@ $cmbYoutubeCookies = New-Object System.Windows.Forms.ComboBox
 $cmbYoutubeCookies.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDownList
 $cmbYoutubeCookies.Location = New-Object System.Drawing.Point(488, 174)
 $cmbYoutubeCookies.Size = New-Object System.Drawing.Size(208, 28)
-$cmbYoutubeCookies.Items.AddRange([object[]]@('بدون کوکی', 'Firefox', 'Microsoft Edge', 'Google Chrome', 'Brave', 'فایل cookies.txt (پیشنهادی)'))
+$cmbYoutubeCookies.DisplayMember = 'Label'
+$cmbYoutubeCookies.ValueMember = 'Key'
+$cmbYoutubeCookies.Items.AddRange([object[]](Get-CookieSourceOption))
 $cmbYoutubeCookies.SelectedIndex = 0
 $tabYoutube.Controls.Add($cmbYoutubeCookies)
 
-$lblYoutubeCookieHint = New-Object System.Windows.Forms.Label
-$lblYoutubeCookieHint.Text = 'برای خطای ورود یا تشخیص ربات، فایل تازهٔ cookies.txt مطمئن‌تر است.'
-$lblYoutubeCookieHint.Location = New-Object System.Drawing.Point(26, 178)
-$lblYoutubeCookieHint.Size = New-Object System.Drawing.Size(450, 28)
-$lblYoutubeCookieHint.ForeColor = [System.Drawing.Color]::DimGray
-$tabYoutube.Controls.Add($lblYoutubeCookieHint)
+$btnYoutubeSignIn = New-Object System.Windows.Forms.Button
+$btnYoutubeSignIn.Text = 'ورود به یوتیوب'
+$btnYoutubeSignIn.Location = New-Object System.Drawing.Point(300, 173)
+$btnYoutubeSignIn.Size = New-Object System.Drawing.Size(176, 31)
+$btnYoutubeSignIn.Enabled = $false
+$tabYoutube.Controls.Add($btnYoutubeSignIn)
 
 $lblYoutubeCookieFile = New-Object System.Windows.Forms.Label
 $lblYoutubeCookieFile.Text = 'فایل کوکی'
@@ -872,7 +859,7 @@ $btnYoutubeCookieFile.Enabled = $false
 $tabYoutube.Controls.Add($btnYoutubeCookieFile)
 
 $lblYoutubeHint = New-Object System.Windows.Forms.Label
-$lblYoutubeHint.Text = 'Deno چالش‌های JavaScript را پردازش می‌کند؛ ویدیو و زیرنویس جدا ذخیره می‌شوند.'
+$lblYoutubeHint.Text = 'Deno چالش‌های JavaScript را پردازش می‌کند؛ ویدیو و زیرنویس جدا ذخیره می‌شوند. اگر YouTube ورود خواست، «ورود با مرورگر» را انتخاب کنید.'
 $lblYoutubeHint.Location = New-Object System.Drawing.Point(74, 255)
 $lblYoutubeHint.Size = New-Object System.Drawing.Size(720, 34)
 $lblYoutubeHint.ForeColor = [System.Drawing.Color]::DimGray
@@ -942,24 +929,18 @@ $timer.Add_Tick({
         elseif ($exitCode -ne 0) {
             $toolName = if ($script:CurrentToolName) { $script:CurrentToolName } else { 'ابزار پردازش' }
             $allDetails = $script:LastToolOutput -join "`r`n"
-            $details = ($script:LastToolOutput | Select-Object -Last 14) -join "`r`n"
-            $isBotCheck = $allDetails -match 'Sign in to confirm you.re not a bot|LOGIN_REQUIRED'
-            if ($script:OperationKind -eq 'youtube' -and $isBotCheck -and $script:YoutubeFallbackStage -and -not $script:YoutubeFallbackAttempted) {
-                $script:YoutubeFallbackAttempted = $true
-                Add-Log 'روش عادی توسط YouTube رد شد؛ تلاش خودکار با کلاینت سازگار جایگزین آغاز می‌شود'
-                $script:StageQueue.Enqueue($script:YoutubeFallbackStage)
+            $failureKind = Get-YtDlpFailureKind -Output $allDetails
+            $canRetryAnotherClient = ($script:OperationKind -eq 'youtube') -and
+                ($failureKind -in @('BotCheck', 'LoginRequired')) -and
+                ($script:YoutubeFallbackStages.Count -gt 0)
+            if ($canRetryAnotherClient) {
+                $nextStage = $script:YoutubeFallbackStages.Dequeue()
+                Add-Log 'روش فعلی توسط YouTube رد شد؛ تلاش خودکار با کلاینت سازگار جایگزین آغاز می‌شود'
+                $script:StageQueue.Enqueue($nextStage)
                 Start-NextStage
             }
             else {
-                $failureMessage = "$toolName با کد خطای $exitCode متوقف شد."
-                if ($isBotCheck) {
-                    $failureMessage += "`r`nYouTube این IP را بدون ورود نپذیرفت. «فایل cookies.txt» را انتخاب کنید و فایل تازهٔ حساب واردشده را معرفی کنید."
-                }
-                elseif ($allDetails -match 'Failed to decrypt with DPAPI') {
-                    $failureMessage += "`r`nکوکی‌های Chrome/Edge در ویندوز قابل رمزگشایی نبودند. از فایل cookies.txt استفاده کنید."
-                }
-                if ($details) { $failureMessage += "`r`n`r`n$details" }
-                Complete-Operation $false $failureMessage
+                Complete-Operation $false (Get-DownloadFailureMessage -ToolName $toolName -ExitCode $exitCode -Output $allDetails)
             }
         }
         else {
@@ -975,16 +956,23 @@ $btnLocateTools.Add_Click({
     if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
         $folder = Split-Path -Parent $dialog.FileName
         $probe = Join-Path $folder 'ffprobe.exe'
-        if (Test-Path -LiteralPath $probe) {
-            $script:FfmpegPath = $dialog.FileName
-            $script:FfprobePath = $probe
-            $lblTools.Text = 'FFmpeg و FFprobe آماده‌اند'
-            $lblTools.ForeColor = [System.Drawing.Color]::FromArgb(20, 120, 75)
-            $lblTools.Tag = $true
-            Add-Log 'ابزارهای ویدیویی شناسایی شدند'
+        if (-not (Test-Path -LiteralPath $probe)) {
+            [System.Windows.Forms.MessageBox]::Show('ffprobe.exe باید در همان پوشهٔ ffmpeg.exe باشد', 'فایل ناقص') | Out-Null
         }
         else {
-            [System.Windows.Forms.MessageBox]::Show('ffprobe.exe باید در همان پوشهٔ ffmpeg.exe باشد', 'فایل ناقص') | Out-Null
+            $ffmpegCheck = Test-ExecutableRunnable -Path $dialog.FileName -Arguments (Get-ToolVersionArgument 'ffmpeg')
+            $ffprobeCheck = Test-ExecutableRunnable -Path $probe -Arguments (Get-ToolVersionArgument 'ffprobe')
+            if (-not $ffmpegCheck.IsRunnable -or -not $ffprobeCheck.IsRunnable) {
+                [System.Windows.Forms.MessageBox]::Show('این فایل‌های FFmpeg اجرا نشدند؛ نسخهٔ سالم ۶۴ بیتی ویندوز را معرفی کنید', 'فایل خراب') | Out-Null
+            }
+            else {
+                $script:FfmpegPath = $dialog.FileName
+                $script:FfprobePath = $probe
+                $lblTools.Text = 'FFmpeg و FFprobe آماده‌اند'
+                $lblTools.ForeColor = [System.Drawing.Color]::FromArgb(20, 120, 75)
+                $lblTools.Tag = $true
+                Add-Log 'ابزارهای ویدیویی شناسایی شدند'
+            }
         }
     }
     $dialog.Dispose()
@@ -995,13 +983,58 @@ $btnYoutubeFolder.Add_Click({
     if ($selectedFolder) { $txtYoutubeFolder.Text = $selectedFolder }
 })
 
+function Get-SelectedCookieSourceKey {
+    if ($cmbYoutubeCookies.SelectedItem) { return [string]$cmbYoutubeCookies.SelectedItem.Key }
+    return 'none'
+}
+
 $cmbYoutubeCookies.Add_SelectedIndexChanged({
-    $useCookieFile = $cmbYoutubeCookies.SelectedIndex -eq 5
+    $sourceKey = Get-SelectedCookieSourceKey
+    $useCookieFile = ($sourceKey -eq 'file')
     $lblYoutubeCookieFile.Enabled = $useCookieFile
     $txtYoutubeCookieFile.Enabled = $useCookieFile
     $btnYoutubeCookieFile.Enabled = $useCookieFile
+    $btnYoutubeSignIn.Enabled = ($sourceKey -eq 'browserlogin')
     if ($useCookieFile -and [string]::IsNullOrWhiteSpace($txtYoutubeCookieFile.Text)) {
         Select-InputFile -Target $txtYoutubeCookieFile -Filter 'فایل کوکی Netscape|cookies.txt;*.txt|همهٔ فایل‌ها|*.*'
+    }
+})
+
+$btnYoutubeSignIn.Add_Click({
+    <#
+        Opens Firefox on a profile folder that belongs to this program only, so
+        the user signs in once without the program ever reading, copying or
+        showing the cookies of their everyday browser profile.
+    #>
+    try {
+        $browserPath = Find-SignInBrowser
+        if (-not $browserPath) {
+            throw "برای این روش باید Firefox روی ویندوز نصب باشد.`r`nپس از نصب Firefox دوباره تلاش کنید، یا گزینهٔ «فایل cookies.txt» را انتخاب کنید."
+        }
+
+        $profileFolder = Get-SignInProfileFolder
+        [void][System.IO.Directory]::CreateDirectory($profileFolder)
+
+        $startInfo = New-Object System.Diagnostics.ProcessStartInfo
+        $startInfo.FileName = $browserPath
+        $startInfo.Arguments = Join-ProcessArguments (New-BrowserSignInArgument -ProfileFolder $profileFolder)
+        $startInfo.UseShellExecute = $false
+        [void][System.Diagnostics.Process]::Start($startInfo)
+
+        Add-Log 'پنجرهٔ ورود یوتیوب در نشست اختصاصی برنامه باز شد'
+        [System.Windows.Forms.MessageBox]::Show(
+            ("یک پنجرهٔ Firefox مخصوص همین برنامه باز شد.`r`n`r`n" +
+             "۱. در همان پنجره وارد حساب YouTube شوید.`r`n" +
+             "۲. یک ویدیو را باز کنید تا ورود کامل ثبت شود.`r`n" +
+             "۳. پنجره را ببندید.`r`n" +
+             "۴. سپس همین‌جا دکمهٔ دانلود را بزنید.`r`n`r`n" +
+             "این نشست جدا از مرورگر روزمرهٔ شماست و برنامه محتوای کوکی‌ها را نمی‌خواند و نمایش نمی‌دهد."),
+            'ورود به یوتیوب',
+            [System.Windows.Forms.MessageBoxButtons]::OK,
+            [System.Windows.Forms.MessageBoxIcon]::Information) | Out-Null
+    }
+    catch {
+        [System.Windows.Forms.MessageBox]::Show($_.Exception.Message, 'خطا', [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error) | Out-Null
     }
 })
 
@@ -1011,106 +1044,71 @@ $btnYoutubeCookieFile.Add_Click({
 
 $btnYoutubeDownload.Add_Click({
     try {
-        $script:YtDlpPath = Resolve-Executable 'yt-dlp'
-        if (-not $script:YtDlpPath) { throw 'yt-dlp.exe پیدا نشد؛ پوشهٔ tools را بررسی کنید' }
-        $script:DenoPath = Resolve-Executable 'deno'
-        if (-not $script:DenoPath) { throw 'deno.exe پیدا نشد؛ این ابزار برای چالش‌های جدید YouTube ضروری است' }
-        if (-not $script:FfmpegPath -or -not $script:FfprobePath) {
-            if (-not (Test-Tools)) { throw 'FFmpeg و FFprobe پیدا نشدند؛ پوشهٔ tools را بررسی کنید' }
-        }
+        if (-not (Test-Tools)) { throw 'FFmpeg و FFprobe سالم پیدا نشدند؛ پوشهٔ tools را بررسی کنید' }
+        if (-not $script:YtDlpPath) { throw 'yt-dlp.exe سالم پیدا نشد؛ پوشهٔ tools را بررسی کنید' }
+        if (-not $script:DenoPath) { throw 'deno.exe سالم پیدا نشد؛ این ابزار برای چالش‌های جدید YouTube ضروری است' }
 
-        $url = $txtYoutubeUrl.Text.Trim().Trim('"').Trim("'")
-        if ($url -match '^\[(https?://[^\]]+)\]\(https?://[^\)]+\)$') { $url = $Matches[1] }
-        if ($url -notmatch '^https?://') { throw 'لینک یوتیوب معتبر نیست' }
-        $downloadFolder = $txtYoutubeFolder.Text.Trim()
-        if ([string]::IsNullOrWhiteSpace($downloadFolder)) { throw 'پوشهٔ خروجی را انتخاب کنید' }
-        if (-not (Test-Path -LiteralPath $downloadFolder -PathType Container)) {
-            [void][System.IO.Directory]::CreateDirectory($downloadFolder)
-        }
-        $languages = $txtYoutubeLanguages.Text.Trim()
-        if ([string]::IsNullOrWhiteSpace($languages)) { $languages = 'fa.*,fa,en.*,en' }
-
-        $format = switch ($cmbYoutubeQuality.SelectedIndex) {
-            0 { 'bv*+ba/b' }
-            1 { 'bv*[height<=1080]+ba/b[height<=1080]/b' }
-            2 { 'bv*[height<=720]+ba/b[height<=720]/b' }
-            3 { 'bv*[height<=480]+ba/b[height<=480]/b' }
-            default { 'bv*[height<=1080]+ba/b[height<=1080]/b' }
-        }
-
+        $url = ConvertTo-CleanYoutubeUrl $txtYoutubeUrl.Text
+        $txtYoutubeUrl.Text = $url
+        $downloadFolder = Resolve-DownloadFolder -Path $txtYoutubeFolder.Text -CreateIfMissing
+        $txtYoutubeFolder.Text = $downloadFolder
+        $languages = ConvertTo-SubtitleLanguageList $txtYoutubeLanguages.Text
+        $format = Get-YoutubeFormatSelector $cmbYoutubeQuality.SelectedIndex
         $toolsFolder = Split-Path -Parent $script:FfmpegPath
-        $arguments = @(
-            '--verbose',
-            '--newline',
-            '--no-playlist',
-            '--windows-filenames',
-            '--ffmpeg-location', $toolsFolder,
-            '--js-runtimes', ('deno:' + $script:DenoPath),
-            '--retries', '10',
-            '--fragment-retries', '10',
-            '--retry-sleep', '2',
-            '-f', $format,
-            '--merge-output-format', 'mp4',
-            '--write-subs',
-            '--write-auto-subs',
-            '--sub-langs', $languages,
-            '--sub-format', 'srt/best',
-            '--convert-subs', 'srt',
-            '--paths', $downloadFolder,
-            '-o', '%(title).180B [%(id)s].%(ext)s'
-        )
-        $cookieBrowser = switch ($cmbYoutubeCookies.SelectedIndex) {
-            1 { 'firefox' }
-            2 { 'edge' }
-            3 { 'chrome' }
-            4 { 'brave' }
-            default { $null }
-        }
-        if ($cookieBrowser) {
-            $arguments += @('--cookies-from-browser', $cookieBrowser)
-            Add-Log "استفاده از کوکی‌های مرورگر: $cookieBrowser"
-        }
-        elseif ($cmbYoutubeCookies.SelectedIndex -eq 5) {
-            $cookieFile = $txtYoutubeCookieFile.Text.Trim()
-            if ([string]::IsNullOrWhiteSpace($cookieFile)) {
-                Select-InputFile -Target $txtYoutubeCookieFile -Filter 'فایل کوکی Netscape|cookies.txt;*.txt|همهٔ فایل‌ها|*.*'
+
+        $cookieFile = $null
+        $cookiesFromBrowser = $null
+        $sourceKey = Get-SelectedCookieSourceKey
+        switch ($sourceKey) {
+            'file' {
                 $cookieFile = $txtYoutubeCookieFile.Text.Trim()
+                if ([string]::IsNullOrWhiteSpace($cookieFile)) {
+                    Select-InputFile -Target $txtYoutubeCookieFile -Filter 'فایل کوکی Netscape|cookies.txt;*.txt|همهٔ فایل‌ها|*.*'
+                    $cookieFile = $txtYoutubeCookieFile.Text.Trim()
+                }
+                $check = Test-CookieFile -Path $cookieFile
+                if (-not $check.IsValid) { throw $check.Message }
+                Add-Log 'استفاده از فایل محلی cookies.txt؛ محتوای کوکی‌ها در برنامه نمایش داده نمی‌شود'
             }
-            if ([string]::IsNullOrWhiteSpace($cookieFile)) {
-                throw 'فایل انتخاب نشد؛ برای عبور از بررسی ربات باید cookies.txt تازه را معرفی کنید'
+            'browserlogin' {
+                $profileFolder = Get-SignInProfileFolder
+                $check = Test-SignInProfile -ProfileFolder $profileFolder
+                if (-not $check.IsReady) { throw ($check.Message + "`r`nابتدا دکمهٔ «ورود به یوتیوب» را بزنید.") }
+                $cookiesFromBrowser = Get-CookiesFromBrowserValue -Browser 'firefox' -ProfileFolder $profileFolder
+                Add-Log 'استفاده از نشست اختصاصی مرورگر؛ محتوای کوکی‌ها در برنامه نمایش داده نمی‌شود'
             }
-            if (-not (Test-Path -LiteralPath $cookieFile -PathType Leaf)) { throw 'فایل cookies.txt معتبر نیست' }
-            $firstLine = [System.IO.File]::ReadLines($cookieFile) | Select-Object -First 1
-            if ($firstLine) { $firstLine = $firstLine.TrimStart([char[]]@([char]0xFEFF)) }
-            if ($firstLine -notin @('# HTTP Cookie File', '# Netscape HTTP Cookie File')) {
-                throw 'فایل کوکی باید در قالب Netscape باشد و خط اول آن # Netscape HTTP Cookie File باشد'
-            }
-            $cookieText = [System.IO.File]::ReadAllText($cookieFile)
-            if ($cookieText -notmatch '(?im)^(?:#HttpOnly_)?\.?([^\t]*\.)?youtube\.com\t') {
-                throw 'این فایل هیچ کوکی مربوط به youtube.com ندارد؛ کوکی‌ها را دوباره از نشست واردشدهٔ YouTube صادر کنید'
-            }
-            if ($cookieText -notmatch '(?im)\t(?:SID|HSID|SSID|APISID|SAPISID|__Secure-1PSID|__Secure-3PSID|LOGIN_INFO)\t') {
-                throw 'این فایل کوکی ورود YouTube را ندارد؛ ابتدا در پنجرهٔ Private وارد حساب شوید و سپس cookies.txt تازه بسازید'
-            }
-            $arguments += @('--cookies', $cookieFile)
-            Add-Log 'استفاده از فایل محلی cookies.txt؛ محتوای کوکی‌ها در برنامه نمایش داده نمی‌شود'
-        }
-        $script:YoutubeFallbackStage = $null
-        $script:YoutubeFallbackAttempted = $false
-        if ($cmbYoutubeCookies.SelectedIndex -eq 0) {
-            $fallbackArguments = @($arguments) + @(
-                '--extractor-args', 'youtube:player_client=tv_simply,web_embedded',
-                $url
-            )
-            $script:YoutubeFallbackStage = [pscustomobject]@{
-                Name = 'تلاش جایگزین برای عبور از محدودیت ناشناس YouTube'
-                ToolName = 'yt-dlp'
-                CaptureOutput = $true
-                Executable = $script:YtDlpPath
-                Arguments = $fallbackArguments
+            'none' { }
+            default {
+                $cookiesFromBrowser = $sourceKey
+                Add-Log "استفاده از کوکی‌های مرورگر: $sourceKey"
             }
         }
-        $arguments += $url
+
+        $argumentSplat = @{
+            Url                = $url
+            DownloadFolder     = $downloadFolder
+            FormatSelector     = $format
+            SubtitleLanguages  = $languages
+            FfmpegFolder       = $toolsFolder
+            DenoPath           = $script:DenoPath
+            CookieFile         = $cookieFile
+            CookiesFromBrowser = $cookiesFromBrowser
+        }
+
+        # Anonymous downloads are the ones YouTube answers with a bot check, so
+        # queue the alternative player clients as automatic retries.
+        $script:YoutubeFallbackStages.Clear()
+        if ($sourceKey -eq 'none') {
+            foreach ($clients in (Get-YoutubeFallbackPlayerClient)) {
+                $script:YoutubeFallbackStages.Enqueue([pscustomobject]@{
+                    Name = "تلاش جایگزین با کلاینت $clients"
+                    ToolName = 'yt-dlp'
+                    CaptureOutput = $true
+                    Executable = $script:YtDlpPath
+                    Arguments = (New-YtDlpArgument @argumentSplat -PlayerClients $clients)
+                })
+            }
+        }
 
         $script:DownloadFolder = $downloadFolder
         $script:DownloadStarted = Get-Date
@@ -1119,7 +1117,7 @@ $btnYoutubeDownload.Add_Click({
             ToolName = 'yt-dlp'
             CaptureOutput = $true
             Executable = $script:YtDlpPath
-            Arguments = $arguments
+            Arguments = (New-YtDlpArgument @argumentSplat)
         }
         Add-Log 'دانلود یوتیوب آغاز شد؛ گزارش کامل yt-dlp پس از پایان همین‌جا نمایش داده می‌شود'
         Start-OperationQueue -Stages @($stage) -SuccessMessage 'دانلود ویدیو و زیرنویس کامل شد' -OutputPath $downloadFolder -OperationKind 'youtube'
