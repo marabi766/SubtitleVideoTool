@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+
+  <!--
+    The MSI. Built with WiX 7:
+
+        wix build installer\SubtitleVideoTool.wxs -arch x64 -o build\SubtitleVideoTool.msi
+
+    It expects the app to have been published to build\app first, and the four
+    bundled tools to be present in tools\. Build-Msi.ps1 does both.
+
+    UpgradeCode identifies the product across every version it will ever have,
+    so it must never change: it is what lets 2.1 replace 2.0 instead of
+    installing alongside it.
+  -->
+
+  <Package Name="Subtitle &amp; Video Compressor"
+           Manufacturer="Subtitle &amp; Video Compressor"
+           Version="$(Version)"
+           UpgradeCode="820AFE67-CDD4-4F6B-9D7F-7A4435CCD6B0"
+           Scope="perMachine"
+           Compressed="yes">
+
+    <SummaryInformation Description="Burn subtitles into a video, shrink it to a size limit, or download from YouTube." />
+
+    <MajorUpgrade AllowSameVersionUpgrades="yes"
+                  DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <!-- Windows 10 1809 is the floor for the bundled .NET runtime. -->
+    <Launch Condition="Installed OR (VersionNT &gt;= 603)"
+            Message="[ProductName] needs Windows 10 or later." />
+
+    <Icon Id="AppIcon" SourceFile="$(SourceRoot)\assets\SubtitleVideoTool.ico" />
+    <Property Id="ARPPRODUCTICON" Value="AppIcon" />
+    <Property Id="ARPNOMODIFY" Value="1" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/yt-dlp/yt-dlp" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="Subtitle &amp; Video Compressor">
+        <Directory Id="TOOLSFOLDER" Name="tools" />
+      </Directory>
+    </StandardDirectory>
+
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="APPMENUFOLDER" Name="Subtitle &amp; Video Compressor" />
+    </StandardDirectory>
+
+    <StandardDirectory Id="DesktopFolder" />
+
+    <Feature Id="Main" Title="Subtitle &amp; Video Compressor" Level="1" AllowAbsent="no">
+      <ComponentGroupRef Id="AppFiles" />
+      <ComponentGroupRef Id="ToolFiles" />
+      <ComponentRef Id="StartMenuShortcut" />
+    </Feature>
+
+    <Feature Id="DesktopShortcut" Title="Desktop shortcut" Level="1">
+      <ComponentRef Id="DesktopShortcutComponent" />
+    </Feature>
+  </Package>
+
+  <Fragment>
+    <!--
+      Harvested at build time rather than enumerated by hand: a self-contained
+      .NET publish is 250-odd files and the list changes with every SDK update.
+    -->
+    <ComponentGroup Id="AppFiles" Directory="INSTALLFOLDER">
+      <Files Include="$(SourceRoot)\build\app\**" />
+    </ComponentGroup>
+
+    <!--
+      ffmpeg, ffprobe, yt-dlp and deno ship inside the MSI so that installing
+      and first run need no internet connection.
+    -->
+    <ComponentGroup Id="ToolFiles" Directory="TOOLSFOLDER">
+      <Files Include="$(SourceRoot)\tools\*.exe" />
+    </ComponentGroup>
+  </Fragment>
+
+  <Fragment>
+    <Component Id="StartMenuShortcut" Directory="APPMENUFOLDER" Guid="*">
+      <Shortcut Id="StartMenuEntry"
+                Name="Subtitle &amp; Video Compressor"
+                Description="Burn subtitles, shrink videos, download from YouTube"
+                Target="[INSTALLFOLDER]SubtitleVideoTool.exe"
+                WorkingDirectory="INSTALLFOLDER"
+                Icon="AppIcon" />
+      <RemoveFolder Id="RemoveAppMenuFolder" Directory="APPMENUFOLDER" On="uninstall" />
+      <!-- A per-machine install still needs a per-user key to own the shortcut. -->
+      <RegistryValue Root="HKCU"
+                     Key="Software\SubtitleVideoTool"
+                     Name="StartMenuShortcut"
+                     Type="integer"
+                     Value="1"
+                     KeyPath="yes" />
+    </Component>
+
+    <Component Id="DesktopShortcutComponent" Directory="DesktopFolder" Guid="*">
+      <Shortcut Id="DesktopEntry"
+                Name="Subtitle &amp; Video Compressor"
+                Target="[INSTALLFOLDER]SubtitleVideoTool.exe"
+                WorkingDirectory="INSTALLFOLDER"
+                Icon="AppIcon" />
+      <RegistryValue Root="HKCU"
+                     Key="Software\SubtitleVideoTool"
+                     Name="DesktopShortcut"
+                     Type="integer"
+                     Value="1"
+                     KeyPath="yes" />
+    </Component>
+  </Fragment>
+</Wix>

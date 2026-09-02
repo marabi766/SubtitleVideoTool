@@ -48,3 +48,6 @@ desktop.ini
 [Bb]in/
 [Oo]bj/
 *.user
+
+# MSI build output
+/build/
