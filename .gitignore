@@ -1,6 +1,5 @@
 # --- Build output ---
-/release/
-/Output/
+/build/
 *.zip
 *.exe.tmp
 
@@ -49,5 +48,3 @@ desktop.ini
 [Oo]bj/
 *.user
 
-# MSI build output
-/build/
