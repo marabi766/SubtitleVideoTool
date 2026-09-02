@@ -1,8 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-
-  <ItemGroup>
-    <ProjectReference Include="..\SubtitleVideoTool.Core\SubtitleVideoTool.Core.csproj" />
-  </ItemGroup>
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -10,6 +6,33 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <!--
+      Only for System.Windows.Forms.ColorDialog: WPF has no colour picker of its
+      own, and this is the same dialog the rest of Windows uses.
+    -->
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>SubtitleVideoTool</AssemblyName>
+    <RootNamespace>SubtitleVideoTool.App</RootNamespace>
+    <ApplicationIcon>..\..\assets\SubtitleVideoTool.ico</ApplicationIcon>
+    <Version>2.0.0</Version>
+    <Product>Subtitle &amp; Video Compressor</Product>
+    <Company>Subtitle &amp; Video Compressor</Company>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+      Enabling Windows Forms also brings its implicit usings, and almost every
+      name in them (Application, UserControl, Color, Brush) collides with the
+      WPF type of the same name. The single Forms call site is fully qualified,
+      so the usings are dropped rather than disambiguated everywhere.
+    -->
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SubtitleVideoTool.Core\SubtitleVideoTool.Core.csproj" />
+  </ItemGroup>
 
 </Project>

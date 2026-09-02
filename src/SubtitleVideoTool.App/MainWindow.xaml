@@ -1,12 +1,178 @@
-﻿<Window x:Class="SubtitleVideoTool.App.MainWindow"
+<Window x:Class="SubtitleVideoTool.App.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:SubtitleVideoTool.App"
-        mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid>
+        xmlns:views="clr-namespace:SubtitleVideoTool.App.Views"
+        Title="Subtitle &amp; Video Compressor"
+        Width="960" Height="720"
+        MinWidth="880" MinHeight="640"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource WindowBackgroundBrush}"
+        UseLayoutRounding="True"
+        TextOptions.TextFormattingMode="Ideal">
 
+    <Window.Resources>
+        <local:BoolToVisibilityConverter x:Key="BoolToVisibility" />
+        <local:BoolToVisibilityConverter x:Key="InverseBoolToVisibility" Invert="True" />
+        <local:StringToVisibilityConverter x:Key="StringToVisibility" />
+
+        <!-- The tab strip: text with an accent underline, not a boxed tab. -->
+        <Style x:Key="StripTab" TargetType="TabItem">
+            <Setter Property="FontFamily" Value="{StaticResource UiFontFamily}" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <StackPanel Margin="0,0,24,0">
+                            <TextBlock x:Name="Label"
+                                       Text="{TemplateBinding Header}"
+                                       Foreground="{TemplateBinding Foreground}"
+                                       FontFamily="{TemplateBinding FontFamily}"
+                                       FontSize="{TemplateBinding FontSize}"
+                                       Margin="0,0,0,8" />
+                            <Border x:Name="Underline"
+                                    Height="2"
+                                    CornerRadius="1"
+                                    Background="Transparent" />
+                        </StackPanel>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Label" Property="FontWeight" Value="SemiBold" />
+                                <Setter TargetName="Label" Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+                                <Setter TargetName="Underline" Property="Background" Value="{DynamicResource AccentBrush}" />
+                            </Trigger>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsMouseOver" Value="True" />
+                                    <Condition Property="IsSelected" Value="False" />
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="Label" Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+                            </MultiTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="24,20,24,16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- ============================================= header + tabs -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,16">
+            <TextBlock Text="Subtitle &amp; Video Compressor" Style="{StaticResource TitleText}" />
+            <TextBlock Text="Burn subtitles in permanently, or shrink a video to a size you choose."
+                       Style="{StaticResource SecondaryText}"
+                       Margin="0,4,0,0" />
+        </StackPanel>
+
+        <TabControl Grid.Row="1"
+                    x:Name="Tabs"
+                    SelectedIndex="{Binding SelectedTab, Mode=TwoWay}"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Padding="0">
+            <TabControl.Template>
+                <ControlTemplate TargetType="TabControl">
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Top"
+                                    Orientation="Horizontal"
+                                    IsItemsHost="True"
+                                    Margin="0,0,0,12" />
+                        <Border Style="{StaticResource Card}">
+                            <ContentPresenter ContentSource="SelectedContent" />
+                        </Border>
+                    </DockPanel>
+                </ControlTemplate>
+            </TabControl.Template>
+
+            <TabItem Header="Burn Subtitles" Style="{StaticResource StripTab}">
+                <views:BurnView DataContext="{Binding Burn}" />
+            </TabItem>
+            <TabItem Header="Compress" Style="{StaticResource StripTab}">
+                <views:CompressView DataContext="{Binding Compress}" />
+            </TabItem>
+            <TabItem Header="Download from YouTube" Style="{StaticResource StripTab}">
+                <views:DownloadView DataContext="{Binding Download}" />
+            </TabItem>
+        </TabControl>
+
+        <!-- ==================================================== footer -->
+        <StackPanel Grid.Row="2" Margin="0,16,0,0">
+
+            <!-- Tool status. The dot's colour is the only thing that changes. -->
+            <Grid Margin="0,0,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Ellipse x:Name="ToolDot" Width="8" Height="8" Margin="0,0,8,0"
+                             Fill="{DynamicResource SuccessBrush}" />
+                    <TextBlock Text="{Binding ToolSummary}" Style="{StaticResource CaptionText}"
+                               VerticalAlignment="Center" />
+                </StackPanel>
+
+                <Button Grid.Column="1"
+                        Content="Locate FFmpeg…"
+                        Style="{StaticResource SmallButton}"
+                        Command="{Binding LocateFfmpegCommand}" />
+            </Grid>
+
+            <!-- Activity: what is happening, how far along, and the way out. -->
+            <Grid Margin="0,0,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="{Binding ActivityText}" Style="{StaticResource BodyText}" />
+                    <ProgressBar Style="{StaticResource FooterProgress}"
+                                 Margin="0,8,16,0"
+                                 Value="{Binding ProgressValue}"
+                                 Maximum="100"
+                                 IsIndeterminate="{Binding ProgressIndeterminate}"
+                                 Visibility="{Binding Busy, Converter={StaticResource BoolToVisibility}}" />
+                </StackPanel>
+
+                <Button Grid.Column="1"
+                        Content="Cancel"
+                        Style="{StaticResource StandardButton}"
+                        VerticalAlignment="Center"
+                        Command="{Binding CancelCommand}" />
+            </Grid>
+
+            <!-- Log, collapsed by default, with its line count on the disclosure. -->
+            <StackPanel>
+                <Button Style="{StaticResource LinkButton}"
+                        FontSize="12"
+                        Content="{Binding LogHeader}"
+                        Command="{Binding ToggleLogCommand}" />
+
+                <Border Style="{StaticResource SubtleCard}"
+                        Margin="0,8,0,0"
+                        Padding="12"
+                        Visibility="{Binding LogExpanded, Converter={StaticResource BoolToVisibility}}">
+                    <ScrollViewer x:Name="LogScroller" Height="140" VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding LogLines}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding}" Style="{StaticResource MonoText}"
+                                               TextWrapping="NoWrap" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Border>
+            </StackPanel>
+        </StackPanel>
     </Grid>
 </Window>

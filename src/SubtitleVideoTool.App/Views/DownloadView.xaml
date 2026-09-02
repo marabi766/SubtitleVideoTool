@@ -1,0 +1,424 @@
+<UserControl x:Class="SubtitleVideoTool.App.Views.DownloadView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:SubtitleVideoTool.App">
+
+    <UserControl.Resources>
+        <local:BoolToVisibilityConverter x:Key="BoolToVisibility" />
+        <local:BoolToVisibilityConverter x:Key="InverseBoolToVisibility" Invert="True" />
+        <local:StringToVisibilityConverter x:Key="StringToVisibility" />
+        <local:RailStepBrushConverter x:Key="RailBrush" />
+        <local:RailStepTextConverter x:Key="RailText" />
+
+        <!-- One access option. Three of these replace what was a dropdown. -->
+        <Style x:Key="AccessCard" TargetType="RadioButton">
+            <Setter Property="GroupName" Value="Access" />
+            <Setter Property="Margin" Value="0,0,0,6" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="Root"
+                                Background="{DynamicResource CardBackgroundBrush}"
+                                BorderBrush="{DynamicResource StrokeBrush}"
+                                BorderThickness="1"
+                                CornerRadius="{StaticResource CardRadius}"
+                                Padding="12,9"
+                                Cursor="Hand">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Ellipse x:Name="Dot" Width="16" Height="16" Margin="0,2,12,0"
+                                         VerticalAlignment="Top"
+                                         Stroke="{DynamicResource TextSecondaryBrush}"
+                                         StrokeThickness="1.5"
+                                         Fill="Transparent" />
+                                <ContentPresenter Grid.Column="1" />
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Root" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                                <Setter TargetName="Root" Property="BorderThickness" Value="2" />
+                                <Setter TargetName="Dot" Property="Fill" Value="{DynamicResource AccentBrush}" />
+                                <Setter TargetName="Dot" Property="Stroke" Value="{DynamicResource AccentBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource SubtleSurfaceBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+    <!-- The right padding keeps the scrollbar off the Browse buttons. -->
+    <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" Padding="0,0,10,0">
+        <StackPanel>
+
+            <!-- ================================================ inputs -->
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="150" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="YouTube link"
+                           Style="{StaticResource BodyText}" VerticalAlignment="Center" />
+                <TextBox Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,12"
+                         Text="{Binding Link, UpdateSourceTrigger=PropertyChanged, Delay=250}"
+                         Tag="Paste a YouTube link" />
+
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="Save to"
+                           Style="{StaticResource BodyText}" VerticalAlignment="Center" />
+                <TextBox Grid.Row="1" Grid.Column="1" Margin="0,0,8,0"
+                         Text="{Binding OutputFolder, UpdateSourceTrigger=PropertyChanged}" />
+                <Button Grid.Row="1" Grid.Column="2" Content="Browse…"
+                        Style="{StaticResource StandardButton}" Command="{Binding BrowseFolderCommand}" />
+            </Grid>
+
+            <!--
+                One block, three conditions: empty, filled, or failed. The link
+                field and the access cards above and below it never change, so a
+                failed check is fixed and re-run without retyping anything.
+            -->
+
+            <!-- Inspecting -->
+            <Border Style="{StaticResource SubtleCard}" Margin="0,16,0,0"
+                    Visibility="{Binding IsInspecting, Converter={StaticResource BoolToVisibility}}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock Text="Checking what this video offers…" Style="{StaticResource BodyStrongText}" />
+                        <TextBlock Text="Usually 6 to 8 seconds. Qualities and subtitles appear here when the answer arrives."
+                                   Style="{StaticResource CaptionText}" Margin="0,4,0,8" />
+                        <ProgressBar Style="{StaticResource StateProgress}" IsIndeterminate="True" />
+                    </StackPanel>
+                    <Button Grid.Column="1" Content="Stop" Margin="16,0,0,0" VerticalAlignment="Top"
+                            Style="{StaticResource SmallButton}" Command="{Binding StopProbeCommand}" />
+                </Grid>
+            </Border>
+
+            <!-- Inspection failed -->
+            <Border Margin="0,16,0,0"
+                    Background="{DynamicResource CautionSurfaceBrush}"
+                    BorderBrush="{DynamicResource CautionBrush}"
+                    BorderThickness="1"
+                    CornerRadius="{StaticResource CardRadius}"
+                    Padding="16"
+                    Visibility="{Binding IsLinkFailed, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel>
+                    <TextBlock Text="{Binding ProbeFailure.Headline}" Style="{StaticResource BodyLargeText}" />
+                    <TextBlock Text="{Binding ProbeFailure.Explanation}" Style="{StaticResource BodyText}"
+                               Margin="0,6,0,12" />
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="{Binding ProbeFailure.PrimaryActionLabel}"
+                                Style="{StaticResource PrimaryButton}" Margin="0,0,8,0"
+                                Command="{Binding CheckAgainCommand}"
+                                Visibility="{Binding ProbeFailure.PrimaryActionLabel, Converter={StaticResource StringToVisibility}}" />
+                        <Button Content="Check again" Style="{StaticResource StandardButton}"
+                                Command="{Binding CheckAgainCommand}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Inspected: what this video actually is -->
+            <StackPanel Visibility="{Binding IsInspected, Converter={StaticResource BoolToVisibility}}">
+
+                <Border Style="{StaticResource SubtleCard}" Margin="0,16,0,0">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Video.Title}" Style="{StaticResource BodyStrongText}"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding VideoSummary}" Style="{StaticResource CaptionText}"
+                                       Margin="0,4,0,0" />
+                        </StackPanel>
+                        <Button Grid.Column="1" Content="Check again" Margin="16,0,0,0"
+                                Style="{StaticResource SmallButton}" Command="{Binding CheckAgainCommand}" />
+                    </Grid>
+                </Border>
+
+                <Grid Margin="0,16,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="150" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <!-- Quality: only what this video really has. -->
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Video quality"
+                               Style="{StaticResource BodyText}" VerticalAlignment="Center" />
+                    <StackPanel Grid.Row="0" Grid.Column="1">
+                        <ComboBox ItemsSource="{Binding Qualities}"
+                                  SelectedItem="{Binding SelectedQuality}"
+                                  HorizontalAlignment="Left"
+                                  MinWidth="260">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid MinWidth="220">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding Label}" />
+                                        <TextBlock Grid.Column="1" Text="{Binding SizeText}"
+                                                   HorizontalAlignment="Right" Margin="16,0,0,0"
+                                                   Foreground="{DynamicResource TextSecondaryBrush}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                        <TextBlock Style="{StaticResource CaptionText}" Margin="0,6,0,0"
+                                   Text="Above 1080p this video only exists in a newer format. It downloads fine, but some older players won't open it."
+                                   Visibility="{Binding ShowCodecNote, Converter={StaticResource BoolToVisibility}}" />
+                    </StackPanel>
+
+                    <!-- English subtitles: one checkbox, one line of provenance. -->
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="English subtitles"
+                               Style="{StaticResource BodyText}" VerticalAlignment="Center" Margin="0,12,0,0" />
+                    <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,12,0,0">
+                        <CheckBox Content="Download English subtitles"
+                                  IsChecked="{Binding DownloadSubtitles}"
+                                  IsEnabled="{Binding HasSubtitle}" />
+                        <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                            <TextBlock Text="{Binding Subtitle.Headline}" Style="{StaticResource BodyStrongText}" />
+                            <TextBlock Text="{Binding Subtitle.Detail}" Style="{StaticResource SecondaryText}"
+                                       Margin="6,0,0,0" />
+                        </StackPanel>
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+
+            <!-- ========================================= YouTube access -->
+            <TextBlock Text="YouTube access" Style="{StaticResource BodyStrongText}" Margin="0,14,0,6" />
+
+            <RadioButton Style="{StaticResource AccessCard}" IsChecked="{Binding IsAnonymous, Mode=OneWay}"
+                         Checked="ChooseAnonymous">
+                <StackPanel>
+                    <TextBlock Text="Try without signing in" Style="{StaticResource BodyStrongText}" />
+                    <TextBlock Style="{StaticResource CaptionText}" Margin="0,3,0,0"
+                               Text="Works for most public videos. If YouTube asks for a bot check, the app will offer to sign in." />
+                </StackPanel>
+            </RadioButton>
+
+            <RadioButton Style="{StaticResource AccessCard}" IsChecked="{Binding IsAppSignIn, Mode=OneWay}"
+                         Checked="ChooseAppSignIn">
+                <StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Sign in to YouTube" Style="{StaticResource BodyStrongText}"
+                                   VerticalAlignment="Center" />
+                        <Button Grid.Column="1" Content="Open sign-in window"
+                                Style="{StaticResource SmallButton}"
+                                Command="{Binding SignInCommand}" />
+                    </Grid>
+                    <TextBlock Style="{StaticResource CaptionText}" Margin="0,3,0,0"
+                               Text="Opens a sign-in window owned by this app. Needed for private, age-restricted or bot-checked videos." />
+                </StackPanel>
+            </RadioButton>
+
+            <RadioButton Style="{StaticResource AccessCard}" IsChecked="{Binding IsBrowserCookies, Mode=OneWay}"
+                         Checked="ChooseBrowser">
+                <StackPanel>
+                    <TextBlock Text="Use a browser I'm signed into" Style="{StaticResource BodyStrongText}" />
+                    <TextBlock Style="{StaticResource CaptionText}" Margin="0,3,0,6"
+                               Text="Firefox, Edge, Chrome, Brave, or a cookies.txt file." />
+                    <StackPanel Orientation="Horizontal"
+                                Visibility="{Binding IsBrowserCookies, Converter={StaticResource BoolToVisibility}}">
+                        <ComboBox x:Name="BrowserChoice" Width="180" Margin="0,0,8,0"
+                                  SelectionChanged="BrowserChanged"
+                                  SelectedIndex="0">
+                            <ComboBoxItem Content="Firefox" />
+                            <ComboBoxItem Content="Microsoft Edge" />
+                            <ComboBoxItem Content="Google Chrome" />
+                            <ComboBoxItem Content="Brave" />
+                            <ComboBoxItem Content="cookies.txt file" />
+                        </ComboBox>
+                        <Button Content="Choose file…" Style="{StaticResource StandardButton}"
+                                Command="{Binding BrowseCookieFileCommand}"
+                                Visibility="{Binding NeedsCookieFile, Converter={StaticResource BoolToVisibility}}" />
+                    </StackPanel>
+                </StackPanel>
+            </RadioButton>
+
+            <TextBlock Style="{StaticResource CaptionText}" Margin="0,4,0,0"
+                       Text="Cookies are passed straight to yt-dlp. This app never shows, stores or copies their contents." />
+
+            <!-- ======================================= the state card -->
+            <Border Style="{StaticResource Card}" Margin="0,20,0,0"
+                    Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel>
+                    <!-- The rail. Five steps, always the same shape. -->
+                    <Grid Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Margin="0,0,4,0">
+                            <Border Height="4" CornerRadius="2"
+                                    Background="{Binding RailIndex, Converter={StaticResource RailBrush}, ConverterParameter=0}" />
+                            <TextBlock Text="Prepare" Style="{StaticResource CaptionText}" Margin="0,6,0,0"
+                                       Foreground="{Binding RailIndex, Converter={StaticResource RailText}, ConverterParameter=0}" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Margin="4,0">
+                            <Border Height="4" CornerRadius="2"
+                                    Background="{Binding RailIndex, Converter={StaticResource RailBrush}, ConverterParameter=1}" />
+                            <TextBlock Text="Connect" Style="{StaticResource CaptionText}" Margin="0,6,0,0"
+                                       Foreground="{Binding RailIndex, Converter={StaticResource RailText}, ConverterParameter=1}" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Margin="4,0">
+                            <Border Height="4" CornerRadius="2"
+                                    Background="{Binding RailIndex, Converter={StaticResource RailBrush}, ConverterParameter=2}" />
+                            <TextBlock Text="Download" Style="{StaticResource CaptionText}" Margin="0,6,0,0"
+                                       Foreground="{Binding RailIndex, Converter={StaticResource RailText}, ConverterParameter=2}" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="3" Margin="4,0">
+                            <Border Height="4" CornerRadius="2"
+                                    Background="{Binding RailIndex, Converter={StaticResource RailBrush}, ConverterParameter=3}" />
+                            <TextBlock Text="Process" Style="{StaticResource CaptionText}" Margin="0,6,0,0"
+                                       Foreground="{Binding RailIndex, Converter={StaticResource RailText}, ConverterParameter=3}" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="4" Margin="4,0,0,0">
+                            <Border Height="4" CornerRadius="2"
+                                    Background="{Binding RailIndex, Converter={StaticResource RailBrush}, ConverterParameter=4}" />
+                            <TextBlock Text="Done" Style="{StaticResource CaptionText}" Margin="0,6,0,0"
+                                       Foreground="{Binding RailIndex, Converter={StaticResource RailText}, ConverterParameter=4}" />
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- headline -> detail -> bar -> figures -->
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{Binding Progress.Headline}" Style="{StaticResource BodyLargeText}" />
+                        <Border Background="{DynamicResource SubtleSurfaceBrush}" CornerRadius="10"
+                                Padding="8,2" Margin="10,2,0,0" VerticalAlignment="Center"
+                                Visibility="{Binding Progress.Badge, Converter={StaticResource StringToVisibility}}">
+                            <TextBlock Text="{Binding Progress.Badge}" Style="{StaticResource CaptionText}" />
+                        </Border>
+                    </StackPanel>
+
+                    <TextBlock Text="{Binding Progress.Detail}" Style="{StaticResource SecondaryText}"
+                               Margin="0,6,0,12" />
+
+                    <ProgressBar Style="{StaticResource StateProgress}"
+                                 Value="{Binding Progress.Percent, Mode=OneWay, TargetNullValue=0}"
+                                 Maximum="100"
+                                 IsIndeterminate="{Binding Progress.HasFigures, Converter={StaticResource InverseBoolToVisibility}, ConverterParameter=x}" />
+
+                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0"
+                                Visibility="{Binding Progress.HasFigures, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Text="{Binding Progress.PercentText}" Style="{StaticResource FigureText}" Margin="0,0,20,0" />
+                        <TextBlock Text="{Binding Progress.SizeText}" Style="{StaticResource FigureText}" Margin="0,0,20,0" />
+                        <TextBlock Text="{Binding Progress.SpeedText}" Style="{StaticResource FigureText}" Margin="0,0,20,0" />
+                        <TextBlock Text="{Binding Progress.EtaText}" Style="{StaticResource FigureText}" />
+                    </StackPanel>
+
+                    <TextBlock Text="{Binding Progress.FiguresPlaceholder}" Style="{StaticResource CaptionText}"
+                               Margin="0,12,0,0"
+                               Visibility="{Binding Progress.HasFigures, Converter={StaticResource InverseBoolToVisibility}}" />
+                </StackPanel>
+            </Border>
+
+            <!-- ====================================== the failure card -->
+            <!-- Four slots: what happened, why, the fix, the raw detail. -->
+            <Border Margin="0,20,0,0"
+                    Background="{DynamicResource CriticalSurfaceBrush}"
+                    BorderBrush="{DynamicResource CriticalBrush}"
+                    BorderThickness="1"
+                    CornerRadius="{StaticResource CardRadius}"
+                    Padding="16"
+                    Visibility="{Binding DownloadFailureCard, Converter={StaticResource StringToVisibility}}">
+                <StackPanel>
+                    <TextBlock Text="{Binding DownloadFailureCard.Headline}" Style="{StaticResource BodyLargeText}" />
+                    <TextBlock Text="{Binding DownloadFailureCard.Explanation}" Style="{StaticResource BodyText}"
+                               Margin="0,6,0,12" />
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <Button Content="{Binding DownloadFailureCard.PrimaryActionLabel}"
+                                Style="{StaticResource PrimaryButton}" Margin="0,0,8,0"
+                                Click="RunPrimaryFailureAction"
+                                Visibility="{Binding DownloadFailureCard.PrimaryActionLabel, Converter={StaticResource StringToVisibility}}" />
+                        <Button Content="{Binding DownloadFailureCard.SecondaryActionLabel}"
+                                Style="{StaticResource StandardButton}"
+                                Click="RunSecondaryFailureAction"
+                                Visibility="{Binding DownloadFailureCard.SecondaryActionLabel, Converter={StaticResource StringToVisibility}}" />
+                    </StackPanel>
+
+                    <Button Style="{StaticResource LinkButton}" FontSize="12"
+                            Content="What yt-dlp reported"
+                            Command="{Binding ToggleDetailsCommand}" />
+                    <Border Style="{StaticResource SubtleCard}" Margin="0,8,0,0" Padding="12"
+                            Visibility="{Binding DetailsExpanded, Converter={StaticResource BoolToVisibility}}">
+                        <ScrollViewer MaxHeight="140" VerticalScrollBarVisibility="Auto">
+                            <TextBlock Text="{Binding DownloadFailureDetail}" Style="{StaticResource MonoText}"
+                                       TextWrapping="Wrap" />
+                        </ScrollViewer>
+                    </Border>
+                </StackPanel>
+            </Border>
+
+            <!-- ====================================== the success card -->
+            <Border Margin="0,20,0,0"
+                    Background="{DynamicResource SuccessSurfaceBrush}"
+                    BorderBrush="{DynamicResource SuccessBrush}"
+                    BorderThickness="1"
+                    CornerRadius="{StaticResource CardRadius}"
+                    Padding="16"
+                    Visibility="{Binding HasSucceeded, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel>
+                    <TextBlock Text="Download complete" Style="{StaticResource BodyLargeText}" />
+                    <TextBlock Text="{Binding Progress.Detail}" Style="{StaticResource SecondaryText}"
+                               Margin="0,6,0,12" />
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="Go to Burn Subtitles" Style="{StaticResource PrimaryButton}"
+                                Margin="0,0,8,0" Command="{Binding GoToBurnCommand}" />
+                        <Button Content="Open folder" Style="{StaticResource StandardButton}"
+                                Command="{Binding OpenFolderCommand}" />
+                    </StackPanel>
+                    <TextBlock Style="{StaticResource CaptionText}" Margin="0,10,0,0"
+                               Text="The video carries over. The subtitle is offered there rather than chosen, so you can look at it first." />
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+
+    <!--
+        The primary action is pinned outside the scroll region: it is the one
+        control that must never be scrolled out of reach.
+    -->
+    <Button Grid.Row="1"
+            Content="Download video &amp; subtitles"
+            Style="{StaticResource PrimaryButton}"
+            HorizontalAlignment="Right"
+            Margin="0,12,10,0"
+            Command="{Binding StartCommand}" />
+    </Grid>
+</UserControl>

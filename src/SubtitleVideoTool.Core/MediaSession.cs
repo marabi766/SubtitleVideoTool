@@ -1,0 +1,345 @@
+using System.Globalization;
+using System.Text.Json;
+using System.Text.RegularExpressions;
+
+namespace SubtitleVideoTool.Core;
+
+public sealed record MediaInfo
+{
+    public TimeSpan Duration { get; init; }
+    public long SizeBytes { get; init; }
+    public int Width { get; init; }
+    public int Height { get; init; }
+
+    /// <summary>"512 MB · 24 min", the line under the Compress tab's size field.</summary>
+    public string Summary =>
+        $"Source is {DownloadFailure.FormatSize(SizeBytes)} · {(int)Math.Round(Duration.TotalMinutes)} min";
+}
+
+public sealed record BurnRequest
+{
+    public required string VideoPath { get; init; }
+    public required string SubtitlePath { get; init; }
+    public required string OutputPath { get; init; }
+    public string FontName { get; init; } = "Segoe UI";
+    public int FontSize { get; init; } = 18;
+
+    /// <summary>ASS colours are &amp;HBBGGRR, which is why these are stored split.</summary>
+    public (byte R, byte G, byte B) TextColour { get; init; } = (255, 255, 255);
+
+    public (byte R, byte G, byte B) BackgroundColour { get; init; } = (0, 0, 0);
+
+    public long? SizeLimitBytes { get; init; }
+}
+
+public sealed record CompressRequest
+{
+    public required string VideoPath { get; init; }
+    public required string OutputPath { get; init; }
+    public required long SizeLimitBytes { get; init; }
+}
+
+public sealed record MediaOutcome
+{
+    public bool Succeeded { get; init; }
+    public bool Cancelled { get; init; }
+    public string? OutputPath { get; init; }
+    public long OutputBytes { get; init; }
+    public bool OvershotLimit { get; init; }
+    public FailureDescription? Failure { get; init; }
+    public string RawOutput { get; init; } = string.Empty;
+}
+
+/// <summary>
+/// The FFmpeg half: reading what a file is, burning subtitles into it, and
+/// hitting a size target.
+/// </summary>
+public sealed partial class MediaSession(ToolSet tools)
+{
+    [GeneratedRegex(@"time=(?<h>\d+):(?<m>\d{2}):(?<s>\d{2})(?:\.(?<cs>\d+))?")]
+    private static partial Regex TimePattern();
+
+    /// <summary>Audio is left at a fixed bitrate; the video bitrate absorbs the target.</summary>
+    private const int AudioBitrateKbps = 128;
+
+    public async Task<MediaInfo> InspectAsync(string path, CancellationToken cancellationToken)
+    {
+        var ffprobe = tools.PathOf(ToolSet.Ffprobe)
+            ?? throw new InputException("FFprobe is not available, so the file cannot be inspected.");
+
+        string[] arguments =
+        [
+            "-v", "error",
+            "-select_streams", "v:0",
+            "-show_entries", "format=duration,size:stream=width,height",
+            "-of", "json",
+            path,
+        ];
+
+        var json = await ToolProcess.ReadAllAsync(ffprobe, arguments, cancellationToken).ConfigureAwait(false);
+
+        using var document = JsonDocument.Parse(json);
+        var root = document.RootElement;
+
+        var duration = TimeSpan.Zero;
+        long size = 0;
+        if (root.TryGetProperty("format", out var format))
+        {
+            if (format.TryGetProperty("duration", out var d) &&
+                double.TryParse(d.GetString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var seconds))
+            {
+                duration = TimeSpan.FromSeconds(seconds);
+            }
+
+            if (format.TryGetProperty("size", out var s) && long.TryParse(s.GetString(), out var bytes))
+            {
+                size = bytes;
+            }
+        }
+
+        var width = 0;
+        var height = 0;
+        if (root.TryGetProperty("streams", out var streams) && streams.GetArrayLength() > 0)
+        {
+            var stream = streams[0];
+            width = stream.TryGetProperty("width", out var w) ? w.GetInt32() : 0;
+            height = stream.TryGetProperty("height", out var h) ? h.GetInt32() : 0;
+        }
+
+        if (size == 0)
+        {
+            try
+            {
+                size = new FileInfo(path).Length;
+            }
+            catch (Exception)
+            {
+                // Leave it at zero; the summary line simply reads oddly.
+            }
+        }
+
+        return new MediaInfo { Duration = duration, SizeBytes = size, Width = width, Height = height };
+    }
+
+    public async Task<MediaOutcome> BurnAsync(
+        BurnRequest request,
+        IProgress<double> progress,
+        Action<string>? onLogLine,
+        CancellationToken cancellationToken)
+    {
+        var ffmpeg = tools.PathOf(ToolSet.Ffmpeg);
+        if (ffmpeg is null)
+        {
+            return Unavailable();
+        }
+
+        var info = await InspectAsync(request.VideoPath, cancellationToken).ConfigureAwait(false);
+        var filter = BuildSubtitleFilter(request);
+
+        List<string> arguments =
+        [
+            "-y",
+            "-i", request.VideoPath,
+            "-vf", filter,
+            "-c:a", "aac",
+            "-b:a", $"{AudioBitrateKbps}k",
+        ];
+
+        if (request.SizeLimitBytes is > 0)
+        {
+            var videoKbps = VideoBitrateKbps(request.SizeLimitBytes.Value, info.Duration);
+            arguments.AddRange(["-c:v", "libx264", "-preset", "medium", "-b:v", $"{videoKbps}k", "-maxrate", $"{videoKbps}k", "-bufsize", $"{videoKbps * 2}k"]);
+        }
+        else
+        {
+            arguments.AddRange(["-c:v", "libx264", "-preset", "medium", "-crf", "20"]);
+        }
+
+        arguments.Add(request.OutputPath);
+
+        return await RunFfmpegAsync(ffmpeg, arguments, info.Duration, request.OutputPath, request.SizeLimitBytes, progress, onLogLine, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    public async Task<MediaOutcome> CompressAsync(
+        CompressRequest request,
+        IProgress<double> progress,
+        Action<string>? onLogLine,
+        CancellationToken cancellationToken)
+    {
+        var ffmpeg = tools.PathOf(ToolSet.Ffmpeg);
+        if (ffmpeg is null)
+        {
+            return Unavailable();
+        }
+
+        var info = await InspectAsync(request.VideoPath, cancellationToken).ConfigureAwait(false);
+        var videoKbps = VideoBitrateKbps(request.SizeLimitBytes, info.Duration);
+
+        List<string> arguments =
+        [
+            "-y",
+            "-i", request.VideoPath,
+            "-c:v", "libx264",
+            "-preset", "medium",
+            "-b:v", $"{videoKbps}k",
+            "-maxrate", $"{videoKbps}k",
+            "-bufsize", $"{videoKbps * 2}k",
+            "-c:a", "aac",
+            "-b:a", $"{AudioBitrateKbps}k",
+        ];
+
+        // Resolution is only lowered when the target cannot be met at the
+        // current one, which is what the tab's hint promises.
+        if (videoKbps < 500 && info.Height > 720)
+        {
+            arguments.AddRange(["-vf", "scale=-2:720"]);
+        }
+
+        arguments.Add(request.OutputPath);
+
+        return await RunFfmpegAsync(ffmpeg, arguments, info.Duration, request.OutputPath, request.SizeLimitBytes, progress, onLogLine, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    private static async Task<MediaOutcome> RunFfmpegAsync(
+        string ffmpeg,
+        IReadOnlyList<string> arguments,
+        TimeSpan duration,
+        string outputPath,
+        long? sizeLimit,
+        IProgress<double> progress,
+        Action<string>? onLogLine,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await ToolProcess.RunAsync(
+                ffmpeg,
+                arguments,
+                new Progress<YtDlpLine>(line => ReportTime(line, duration, progress)),
+                onLogLine,
+                cancellationToken).ConfigureAwait(false);
+
+            if (!result.Succeeded)
+            {
+                TryDelete(outputPath);
+                return new MediaOutcome
+                {
+                    Failure = DownloadFailure.Describe(result.Output),
+                    RawOutput = result.Output,
+                };
+            }
+
+            var bytes = File.Exists(outputPath) ? new FileInfo(outputPath).Length : 0;
+            return new MediaOutcome
+            {
+                Succeeded = true,
+                OutputPath = outputPath,
+                OutputBytes = bytes,
+                OvershotLimit = sizeLimit is > 0 && bytes > sizeLimit,
+                RawOutput = result.Output,
+            };
+        }
+        catch (OperationCanceledException)
+        {
+            TryDelete(outputPath);
+            return new MediaOutcome { Cancelled = true };
+        }
+    }
+
+    /// <summary>
+    /// FFmpeg reports elapsed media time rather than a percentage, so the bar
+    /// comes from time against the source's duration.
+    /// </summary>
+    private static void ReportTime(YtDlpLine line, TimeSpan duration, IProgress<double> progress)
+    {
+        if (duration <= TimeSpan.Zero)
+        {
+            return;
+        }
+
+        var match = TimePattern().Match(line.Text);
+        if (!match.Success)
+        {
+            return;
+        }
+
+        var elapsed = new TimeSpan(
+            0,
+            int.Parse(match.Groups["h"].Value, CultureInfo.InvariantCulture),
+            int.Parse(match.Groups["m"].Value, CultureInfo.InvariantCulture),
+            int.Parse(match.Groups["s"].Value, CultureInfo.InvariantCulture),
+            match.Groups["cs"].Success ? int.Parse(match.Groups["cs"].Value, CultureInfo.InvariantCulture) * 10 : 0);
+
+        progress.Report(Math.Clamp(elapsed.TotalSeconds / duration.TotalSeconds * 100, 0, 100));
+    }
+
+    private static int VideoBitrateKbps(long sizeLimitBytes, TimeSpan duration)
+    {
+        if (duration <= TimeSpan.Zero)
+        {
+            return 1000;
+        }
+
+        // 4% headroom for the container and muxing overhead, so the result lands
+        // under the target rather than a whisker over it.
+        var totalKbps = sizeLimitBytes * 8 / duration.TotalSeconds / 1000 * 0.96;
+        return Math.Max(200, (int)(totalKbps - AudioBitrateKbps));
+    }
+
+    /// <summary>
+    /// The subtitles filter takes a path inside a quoted filter string, so
+    /// backslashes, colons and quotes all have to be escaped or the filter is
+    /// silently mis-parsed.
+    /// </summary>
+    public static string BuildSubtitleFilter(BurnRequest request)
+    {
+        var path = request.SubtitlePath.Replace('\\', '/').Replace("'", @"\'");
+        path = path.Replace(":", @"\:");
+
+        var style =
+            $"FontName={request.FontName}," +
+            $"FontSize={request.FontSize}," +
+            $"PrimaryColour={AssColour(request.TextColour)}," +
+            $"OutlineColour={AssColour(request.BackgroundColour)}," +
+            "BorderStyle=3,Outline=1,Shadow=0";
+
+        return $"subtitles='{path}':force_style='{style}'";
+    }
+
+    /// <summary>ASS wants &amp;HBBGGRR, the reverse of the usual RRGGBB.</summary>
+    private static string AssColour((byte R, byte G, byte B) colour) =>
+        $"&H{colour.B:X2}{colour.G:X2}{colour.R:X2}";
+
+    private static MediaOutcome Unavailable() => new()
+    {
+        Failure = new FailureDescription
+        {
+            Kind = FailureKind.FfmpegMissing,
+            Headline = "FFmpeg won't start",
+            Explanation =
+                @"The file tools\ffmpeg.exe is missing or Windows refuses to run it — usually a blocked download " +
+                "or antivirus quarantine. Burning and compressing are unavailable until it works.",
+            PrimaryAction = FailureAction.LocateFfmpeg,
+            PrimaryActionLabel = "Locate FFmpeg…",
+            SecondaryAction = FailureAction.CheckAgain,
+            SecondaryActionLabel = "Check again",
+        },
+    };
+
+    private static void TryDelete(string path)
+    {
+        try
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+        catch (Exception)
+        {
+            // A half-written file we cannot remove is not worth failing over.
+        }
+    }
+}
