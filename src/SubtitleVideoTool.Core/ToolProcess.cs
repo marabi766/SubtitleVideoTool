@@ -21,7 +21,9 @@ public static class ToolProcess
     /// <summary>
     /// Lines are delivered through <paramref name="onLine"/>, which is an
     /// <see cref="IProgress{T}"/> so the window receives them on its own thread
-    /// without any cross-thread call of its own.
+    /// without any cross-thread call of its own. <paramref name="onRawLine"/>
+    /// has no such protection — it runs on the process's reader thread, so
+    /// anything it touches has to be safe to touch from there.
     /// </summary>
     public static async Task<ToolResult> RunAsync(
         string executable,
@@ -63,11 +65,14 @@ public static class ToolProcess
                 return;
             }
 
-            onRawLine?.Invoke(raw);
-
             var line = YtDlpOutput.Parse(raw);
             if (line.Kind is not (YtDlpLineKind.Progress or YtDlpLineKind.Empty))
             {
+                // The log gets the same lines the failure card is classified
+                // from. Progress is left out of both: yt-dlp emits several a
+                // second, and they would bury the line that explains a failure.
+                onRawLine?.Invoke(raw);
+
                 lock (captureLock)
                 {
                     captured.Add(raw);

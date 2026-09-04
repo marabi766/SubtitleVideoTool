@@ -1,5 +1,7 @@
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Windows;
+using System.Windows.Threading;
 using SubtitleVideoTool.Core;
 
 namespace SubtitleVideoTool.App;
@@ -134,6 +136,12 @@ public sealed class MainViewModel : ObservableObject
         ? $"Hide log — {LogLines.Count} lines"
         : $"Show log — {LogLines.Count} lines";
 
+    /// <summary>
+    /// Safe to call from any thread. Every tool writes its output on a reader
+    /// thread of its own, and a bound ObservableCollection touched from there
+    /// takes the whole window down, so the hop happens here rather than being
+    /// left to each caller to remember.
+    /// </summary>
     public void Log(string message)
     {
         if (string.IsNullOrWhiteSpace(message))
@@ -141,7 +149,22 @@ public sealed class MainViewModel : ObservableObject
             return;
         }
 
-        LogLines.Add($"[{DateTime.Now:HH:mm:ss}] {message}");
+        var line = $"[{DateTime.Now:HH:mm:ss}] {message}";
+        var dispatcher = Application.Current?.Dispatcher;
+
+        if (dispatcher is null || dispatcher.CheckAccess())
+        {
+            Append(line);
+        }
+        else
+        {
+            dispatcher.BeginInvoke(DispatcherPriority.Background, () => Append(line));
+        }
+    }
+
+    private void Append(string line)
+    {
+        LogLines.Add(line);
 
         // A verbose run would otherwise grow without bound; the newest part is
         // the part that explains what just happened.
