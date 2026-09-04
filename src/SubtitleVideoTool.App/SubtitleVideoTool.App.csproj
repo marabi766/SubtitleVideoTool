@@ -14,7 +14,7 @@
     <AssemblyName>SubtitleVideoTool</AssemblyName>
     <RootNamespace>SubtitleVideoTool.App</RootNamespace>
     <ApplicationIcon>..\..\assets\SubtitleVideoTool.ico</ApplicationIcon>
-    <Version>2.0.0</Version>
+    <Version>2.1.0</Version>
     <Product>Subtitle &amp; Video Compressor</Product>
     <Company>Subtitle &amp; Video Compressor</Company>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
