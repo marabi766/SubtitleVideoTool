@@ -29,6 +29,8 @@
             <TextBlock Grid.Row="0" Grid.Column="0" Text="Video file"
                        Style="{StaticResource BodyText}" VerticalAlignment="Center" />
             <TextBox Grid.Row="0" Grid.Column="1" Margin="0,0,8,12"
+                     AutomationProperties.AutomationId="VideoBox"
+                     AutomationProperties.Name="Video file"
                      Text="{Binding VideoPath, UpdateSourceTrigger=PropertyChanged}"
                      Tag="Choose a video file" />
             <Button Grid.Row="0" Grid.Column="2" Margin="0,0,0,12" Content="Browse…"
@@ -38,6 +40,8 @@
             <TextBlock Grid.Row="1" Grid.Column="0" Text="Subtitle file"
                        Style="{StaticResource BodyText}" VerticalAlignment="Center" />
             <TextBox Grid.Row="1" Grid.Column="1" Margin="0,0,8,0"
+                     AutomationProperties.AutomationId="SubtitleBox"
+                     AutomationProperties.Name="Subtitle file"
                      Text="{Binding SubtitlePath, UpdateSourceTrigger=PropertyChanged}"
                      Tag="Choose an .srt file" />
             <Button Grid.Row="1" Grid.Column="2" Content="Browse…"
@@ -74,6 +78,8 @@
             <TextBlock Grid.Row="3" Grid.Column="0" Text="Output file"
                        Style="{StaticResource BodyText}" VerticalAlignment="Center" />
             <TextBox Grid.Row="3" Grid.Column="1" Margin="0,0,8,16"
+                     AutomationProperties.AutomationId="OutputBox"
+                     AutomationProperties.Name="Output file"
                      Text="{Binding OutputPath, UpdateSourceTrigger=PropertyChanged}"
                      Tag="Where to save the result" />
             <Button Grid.Row="3" Grid.Column="2" Margin="0,0,0,16" Content="Browse…"
@@ -82,11 +88,41 @@
             <!-- Style: one row, because these four settings are one decision. -->
             <TextBlock Grid.Row="4" Grid.Column="0" Text="Subtitle style"
                        Style="{StaticResource BodyText}" VerticalAlignment="Center" />
-            <StackPanel Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2"
-                        Orientation="Horizontal" Margin="0,0,0,12">
-                <TextBox Width="170" Margin="0,0,8,0"
-                         Text="{Binding FontName, UpdateSourceTrigger=PropertyChanged}" />
+            <StackPanel Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,12">
+              <StackPanel Orientation="Horizontal">
+                <!--
+                    Editable so typing filters the list: there are around a
+                    thousand families installed and scrolling that is no way to
+                    find one. Each entry is drawn in its own font.
+                -->
+                <ComboBox x:Name="FontBox" Width="220" Margin="0,0,8,0"
+                          AutomationProperties.AutomationId="FontBox"
+                          AutomationProperties.Name="Subtitle font"
+                          IsEditable="True"
+                          IsTextSearchEnabled="False"
+                          StaysOpenOnEdit="True"
+                          IsSynchronizedWithCurrentItem="False"
+                          MaxDropDownHeight="320"
+                          ItemsSource="{Binding Fonts}"
+                          TextBoxBase.TextChanged="FontTyped"
+                          SelectionChanged="FontPicked"
+                          DropDownClosed="FontListClosed"
+                          LostKeyboardFocus="FontCommitted">
+                    <!--
+                        Text is driven from code rather than bound: narrowing the
+                        list clears the ComboBox's own selection, and a bound
+                        Text would be wiped along with it on every keystroke.
+                    -->
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding}" FontFamily="{Binding}" FontSize="14"
+                                       AutomationProperties.Name="{Binding}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
                 <TextBox Width="60" Margin="0,0,4,0"
+                         AutomationProperties.AutomationId="FontSizeBox"
+                         AutomationProperties.Name="Font size in points"
                          Text="{Binding FontSize, UpdateSourceTrigger=PropertyChanged}" />
                 <TextBlock Text="pt" Style="{StaticResource SecondaryText}"
                            VerticalAlignment="Center" Margin="0,0,16,0" />
@@ -110,6 +146,24 @@
                         <TextBlock Text="Background" VerticalAlignment="Center" />
                     </StackPanel>
                 </Button>
+              </StackPanel>
+
+              <!--
+                  Said before the encode rather than discovered after it: libass
+                  substitutes silently when it cannot use the chosen font.
+              -->
+              <TextBlock Style="{StaticResource CaptionText}"
+                         Margin="0,6,0,0"
+                         Foreground="{DynamicResource CautionBrush}"
+                         Text="{Binding FontWarning}"
+                         Visibility="{Binding HasFontWarning, Converter={StaticResource BoolToVisibility}}" />
+
+              <!-- The list still shows everything, so this is what says the search missed. -->
+              <TextBlock Style="{StaticResource CaptionText}"
+                         Margin="0,6,0,0"
+                         AutomationProperties.AutomationId="FontSearchNote"
+                         Text="{Binding FontSearchNote}"
+                         Visibility="{Binding FontSearchNote, Converter={StaticResource StringToVisibility}}" />
             </StackPanel>
 
             <!-- Also compress -->
@@ -120,6 +174,8 @@
                     <CheckBox Content="Shrink the result to a size limit"
                               IsChecked="{Binding AlsoCompress}" Margin="0,0,16,0" />
                     <TextBox Width="80" Margin="0,0,8,0"
+                             AutomationProperties.AutomationId="SizeLimitBox"
+                             AutomationProperties.Name="Size limit in megabytes"
                              IsEnabled="{Binding AlsoCompress}"
                              Text="{Binding SizeLimitMb, UpdateSourceTrigger=PropertyChanged}" />
                     <TextBlock Text="MB" Style="{StaticResource SecondaryText}" VerticalAlignment="Center" />
@@ -132,6 +188,7 @@
             <StackPanel Grid.Row="6" Grid.Column="1" Grid.ColumnSpan="2"
                         HorizontalAlignment="Right" Margin="0,20,0,0">
                 <Button Content="Start burning"
+                        AutomationProperties.AutomationId="StartBurnButton"
                         Style="{StaticResource PrimaryButton}"
                         Command="{Binding StartCommand}" />
             </StackPanel>

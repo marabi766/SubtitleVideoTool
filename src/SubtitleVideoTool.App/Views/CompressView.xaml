@@ -24,6 +24,8 @@
         <TextBlock Grid.Row="0" Grid.Column="0" Text="Video file"
                    Style="{StaticResource BodyText}" VerticalAlignment="Center" />
         <TextBox Grid.Row="0" Grid.Column="1" Margin="0,0,8,12"
+                 AutomationProperties.AutomationId="VideoBox"
+                 AutomationProperties.Name="Video file"
                  Text="{Binding VideoPath, UpdateSourceTrigger=PropertyChanged}"
                  Tag="Choose a video file" />
         <Button Grid.Row="0" Grid.Column="2" Margin="0,0,0,12" Content="Browse…"
@@ -32,6 +34,8 @@
         <TextBlock Grid.Row="1" Grid.Column="0" Text="Output file"
                    Style="{StaticResource BodyText}" VerticalAlignment="Center" />
         <TextBox Grid.Row="1" Grid.Column="1" Margin="0,0,8,16"
+                 AutomationProperties.AutomationId="OutputBox"
+                 AutomationProperties.Name="Output file"
                  Text="{Binding OutputPath, UpdateSourceTrigger=PropertyChanged}"
                  Tag="Where to save the result" />
         <Button Grid.Row="1" Grid.Column="2" Margin="0,0,0,16" Content="Browse…"
@@ -41,6 +45,8 @@
                    Style="{StaticResource BodyText}" VerticalAlignment="Center" />
         <StackPanel Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal">
             <TextBox Width="90" Margin="0,0,8,0"
+                     AutomationProperties.AutomationId="SizeLimitBox"
+                     AutomationProperties.Name="Size limit in megabytes"
                      Text="{Binding SizeLimitMb, UpdateSourceTrigger=PropertyChanged}" />
             <TextBlock Text="MB" Style="{StaticResource SecondaryText}"
                        VerticalAlignment="Center" Margin="0,0,16,0" />
@@ -48,6 +54,16 @@
                        VerticalAlignment="Center"
                        Visibility="{Binding SourceSummary, Converter={StaticResource StringToVisibility}}" />
         </StackPanel>
+
+        <!-- An impossible target, said before the wait rather than after it. -->
+        <TextBlock Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2"
+                   Style="{StaticResource CaptionText}"
+                   Foreground="{DynamicResource CautionBrush}"
+                   Margin="0,38,0,0"
+                   AutomationProperties.AutomationId="LimitWarning"
+                   TextWrapping="Wrap"
+                   Text="{Binding LimitWarning}"
+                   Visibility="{Binding LimitWarning, Converter={StaticResource StringToVisibility}}" />
 
         <!-- What the number actually means, before anything is started. -->
         <Border Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2"
@@ -59,6 +75,7 @@
         <StackPanel Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2"
                     HorizontalAlignment="Right" Margin="0,20,0,0">
             <Button Content="Analyse &amp; compress"
+                    AutomationProperties.AutomationId="StartCompressButton"
                     Style="{StaticResource PrimaryButton}"
                     Command="{Binding StartCommand}" />
         </StackPanel>

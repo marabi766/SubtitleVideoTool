@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows.Media;
 using SubtitleVideoTool.Core;
@@ -70,9 +71,16 @@ public abstract class MediaViewModelBase(MainViewModel shell, ToolSet tools) : O
 
     public bool HasSucceeded => Outcome is { Succeeded: true };
 
+    /// <summary>
+    /// An overshoot says by how much. "A little over" was the wording whether
+    /// the result missed by a percent or by double, which is not something the
+    /// user should have to check for themselves.
+    /// </summary>
     public string ResultText => Outcome is { Succeeded: true } result
-        ? result.OvershotLimit
-            ? $"Done — {DownloadFailure.FormatSize(result.OutputBytes)}, a little over the limit you set."
+        ? result is { OvershotLimit: true, SizeLimitBytes: > 0 and var limit }
+            ? $"Done — {DownloadFailure.FormatSize(result.OutputBytes)}, over the " +
+              $"{DownloadFailure.FormatSize(limit)} limit you set. This video can't be made " +
+              "smaller without dropping the picture below what is worth watching."
             : $"Done — {DownloadFailure.FormatSize(result.OutputBytes)}."
         : string.Empty;
 
@@ -171,8 +179,22 @@ public abstract class MediaViewModelBase(MainViewModel shell, ToolSet tools) : O
 
 public sealed class BurnViewModel : MediaViewModelBase
 {
+    /// <summary>
+    /// Preferred default. It is what the user asked for; whether ffmpeg can
+    /// actually use it is reported by the font check rather than assumed.
+    /// </summary>
+    private const string PreferredFont = "Peyda";
+
+    private const string FallbackFont = "Segoe UI";
+
+    private readonly FontCheck fontCheck;
+    private CancellationTokenSource? fontCheckWork;
+
     private string subtitlePath = string.Empty;
-    private string fontName = "Segoe UI";
+    private string fontName = FallbackFont;
+    private string fontSearch = string.Empty;
+    private bool hasFontMatches = true;
+    private FontVerdict? fontVerdict;
     private int fontSize = 18;
     private Color textColour = Colors.White;
     private Color backgroundColour = Colors.Black;
@@ -183,6 +205,23 @@ public sealed class BurnViewModel : MediaViewModelBase
 
     public BurnViewModel(MainViewModel shell, ToolSet tools) : base(shell, tools)
     {
+        fontCheck = new FontCheck(tools);
+
+        AllFonts = System.Windows.Media.Fonts.SystemFontFamilies
+            .Select(family => family.Source)
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(name => name, StringComparer.CurrentCultureIgnoreCase)
+            .ToArray();
+
+        // Default to the preferred font when it is installed, so the common
+        // case needs no choosing at all.
+        fontName = AllFonts.Contains(PreferredFont, StringComparer.OrdinalIgnoreCase)
+            ? PreferredFont
+            : FallbackFont;
+
+        RefreshFontList();
+
         BrowseVideoCommand = new RelayCommand(() => { if (PickVideo() is { } path) VideoPath = path; });
         BrowseSubtitleCommand = new RelayCommand(BrowseSubtitle);
         BrowseOutputCommand = new RelayCommand(() => { if (PickOutput(OutputPath) is { } path) OutputPath = path; });
@@ -217,13 +256,178 @@ public sealed class BurnViewModel : MediaViewModelBase
             }
 
             RaiseCanStart();
+
+            // A different subtitle may be in a different script, which changes
+            // whether the chosen font can render it.
+            _ = CheckFontAsync();
         }
     }
+
+    /// <summary>Every font family installed, as DirectWrite names them.</summary>
+    public IReadOnlyList<string> AllFonts { get; }
+
+    /// <summary>The filtered view the dropdown binds to.</summary>
+    public ObservableCollection<string> Fonts { get; } = [];
 
     public string FontName
     {
         get => fontName;
-        set => Set(ref fontName, value);
+        set
+        {
+            if (Set(ref fontName, value))
+            {
+                RaiseCanStart();
+                _ = CheckFontAsync();
+            }
+        }
+    }
+
+    /// <summary>What the user has typed into the font box, used to narrow the list.</summary>
+    public string FontSearch
+    {
+        get => fontSearch;
+        set
+        {
+            if (Set(ref fontSearch, value))
+            {
+                RefreshFontList();
+            }
+        }
+    }
+
+    public FontVerdict? FontVerdict
+    {
+        get => fontVerdict;
+        private set
+        {
+            if (Set(ref fontVerdict, value))
+            {
+                RaiseAll(nameof(FontWarning), nameof(HasFontWarning));
+            }
+        }
+    }
+
+    public bool HasFontWarning => FontVerdict is { Checked: true, Matched: false };
+
+    /// <summary>
+    /// Said plainly, because the alternative is discovering it after a long
+    /// encode: the subtitle will not be in the font that was chosen.
+    /// </summary>
+    public string FontWarning => FontVerdict is { Checked: true, Matched: false } verdict
+        ? $"FFmpeg can't use \"{verdict.Requested}\" and will substitute {verdict.Resolved}. " +
+          "Either the font can't be read, or it has no letters for this subtitle's script."
+        : string.Empty;
+
+    /// <summary>True while the typed text matches at least one installed family.</summary>
+    public bool HasFontMatches => hasFontMatches;
+
+    public string FontSearchNote => hasFontMatches
+        ? string.Empty
+        : $"No installed font matches “{FontSearch.Trim()}”.";
+
+    /// <summary>
+    /// Narrows the list to what was typed. A needle that matches nothing leaves
+    /// the whole list in place rather than an empty dropdown — the note beside
+    /// the box is what says the search found nothing.
+    /// </summary>
+    private void RefreshFontList()
+    {
+        var needle = FontSearch.Trim();
+
+        IReadOnlyList<string> matches = needle.Length == 0
+            ? AllFonts
+            : AllFonts.Where(name => name.Contains(needle, StringComparison.CurrentCultureIgnoreCase)).ToArray();
+
+        var found = matches.Count > 0;
+        var shown = found ? matches : AllFonts;
+
+        // Rewriting an identical list would reset the ComboBox's editable text
+        // for nothing, so an unchanged result is left alone.
+        if (!Fonts.SequenceEqual(shown, StringComparer.Ordinal))
+        {
+            Fonts.Clear();
+            foreach (var name in shown)
+            {
+                Fonts.Add(name);
+            }
+        }
+
+        if (hasFontMatches != found)
+        {
+            hasFontMatches = found;
+            RaiseAll(nameof(HasFontMatches), nameof(FontSearchNote));
+        }
+        else if (!found)
+        {
+            Raise(nameof(FontSearchNote));
+        }
+    }
+
+    /// <summary>
+    /// Verifies against the subtitle that is actually loaded, so a Latin-only
+    /// font is flagged for Persian text but not for English.
+    /// </summary>
+    private async Task CheckFontAsync()
+    {
+        fontCheckWork?.Cancel();
+        fontCheckWork = new CancellationTokenSource();
+        var token = fontCheckWork.Token;
+
+        FontVerdict = null;
+        if (!Tools.CanProcessVideo || FontName.Length == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            // Each check starts an FFmpeg process. Arrowing down the font list
+            // would otherwise start one per keystroke, so the newest choice
+            // cancels the ones still waiting here.
+            await Task.Delay(TimeSpan.FromMilliseconds(400), token).ConfigureAwait(true);
+
+            var sample = ReadSubtitleSample();
+            var verdict = await fontCheck.VerifyAsync(FontName, sample, token).ConfigureAwait(true);
+            if (!token.IsCancellationRequested)
+            {
+                FontVerdict = verdict;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Superseded by a newer selection.
+        }
+    }
+
+    /// <summary>
+    /// A line from the chosen subtitle is the honest sample. Without one, the
+    /// Persian sample is used, since that is the demanding case here.
+    /// </summary>
+    private string ReadSubtitleSample()
+    {
+        try
+        {
+            if (File.Exists(SubtitlePath))
+            {
+                var line = File.ReadLines(SubtitlePath)
+                    .Select(text => text.Trim())
+                    .FirstOrDefault(text =>
+                        text.Length > 0 &&
+                        !text.Contains("-->", StringComparison.Ordinal) &&
+                        !int.TryParse(text, out _));
+
+                if (!string.IsNullOrWhiteSpace(line))
+                {
+                    return line.Length > 60 ? line[..60] : line;
+                }
+            }
+        }
+        catch (Exception)
+        {
+            // Fall through to the sample below.
+        }
+
+        return FontCheck.PersianSample;
     }
 
     public int FontSize
@@ -369,6 +573,7 @@ public sealed class CompressViewModel : MediaViewModelBase
 {
     private int sizeLimitMb = 120;
     private string sourceSummary = string.Empty;
+    private TimeSpan sourceDuration;
 
     public CompressViewModel(MainViewModel shell, ToolSet tools) : base(shell, tools)
     {
@@ -386,7 +591,14 @@ public sealed class CompressViewModel : MediaViewModelBase
     public int SizeLimitMb
     {
         get => sizeLimitMb;
-        set => Set(ref sizeLimitMb, value);
+        set
+        {
+            if (Set(ref sizeLimitMb, value))
+            {
+                RaiseCanStart();
+                Raise(nameof(LimitWarning));
+            }
+        }
     }
 
     /// <summary>"Source is 512 MB · 24 min"</summary>
@@ -394,6 +606,29 @@ public sealed class CompressViewModel : MediaViewModelBase
     {
         get => sourceSummary;
         private set => Set(ref sourceSummary, value);
+    }
+
+    /// <summary>
+    /// Said before the encode rather than after it. A limit below what the
+    /// length of the video allows cannot be met however the encode is run, and
+    /// finding that out after waiting for it is the worst way to learn it.
+    /// </summary>
+    public string LimitWarning
+    {
+        get
+        {
+            if (sourceDuration <= TimeSpan.Zero)
+            {
+                return string.Empty;
+            }
+
+            var smallest = MediaSession.SmallestReachableBytes(sourceDuration);
+            return (long)SizeLimitMb * 1024 * 1024 >= smallest
+                ? string.Empty
+                : $"{SizeLimitMb} MB is below what {(int)Math.Round(sourceDuration.TotalMinutes)} minutes of " +
+                  $"video can be squeezed into. The smallest this one gets is about " +
+                  $"{DownloadFailure.FormatSize(smallest)}.";
+        }
     }
 
     public override void OnToolsChanged() => StartCommand.RaiseCanExecuteChanged();
@@ -408,6 +643,9 @@ public sealed class CompressViewModel : MediaViewModelBase
     protected override async void OnVideoChanged()
     {
         SourceSummary = string.Empty;
+        sourceDuration = TimeSpan.Zero;
+        Raise(nameof(LimitWarning));
+
         if (!File.Exists(VideoPath) || !Tools.CanProcessVideo)
         {
             return;
@@ -417,12 +655,15 @@ public sealed class CompressViewModel : MediaViewModelBase
         {
             var info = await Session.InspectAsync(VideoPath, CancellationToken.None).ConfigureAwait(true);
             SourceSummary = info.Summary;
+            sourceDuration = info.Duration;
         }
         catch (Exception)
         {
             // The tab still works without the summary line.
             SourceSummary = string.Empty;
         }
+
+        Raise(nameof(LimitWarning));
     }
 
     private bool CanStart() =>

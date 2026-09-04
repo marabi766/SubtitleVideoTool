@@ -86,7 +86,14 @@
                                     IsItemsHost="True"
                                     Margin="0,0,0,12" />
                         <Border Style="{StaticResource Card}">
-                            <ContentPresenter ContentSource="SelectedContent" />
+                            <!--
+                                The name is a contract, not decoration: TabControl
+                                finds its content presenter by it, and without the
+                                name the selected tab's content never reaches the
+                                automation tree — invisible to screen readers.
+                            -->
+                            <ContentPresenter x:Name="PART_SelectedContentHost"
+                                              ContentSource="SelectedContent" />
                         </Border>
                     </DockPanel>
                 </ControlTemplate>
