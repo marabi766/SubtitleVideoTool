@@ -46,6 +46,9 @@ public sealed record MediaOutcome
     public string? OutputPath { get; init; }
     public long OutputBytes { get; init; }
     public bool OvershotLimit { get; init; }
+
+    /// <summary>The limit that was asked for, so a result can be measured against it.</summary>
+    public long? SizeLimitBytes { get; init; }
     public FailureDescription? Failure { get; init; }
     public string RawOutput { get; init; } = string.Empty;
 }
@@ -59,8 +62,15 @@ public sealed partial class MediaSession(ToolSet tools)
     [GeneratedRegex(@"time=(?<h>\d+):(?<m>\d{2}):(?<s>\d{2})(?:\.(?<cs>\d+))?")]
     private static partial Regex TimePattern();
 
-    /// <summary>Audio is left at a fixed bitrate; the video bitrate absorbs the target.</summary>
-    private const int AudioBitrateKbps = 128;
+    /// <summary>
+    /// Audio bitrates worth using, best first. A fixed 128 kbps used to be
+    /// spent whatever the target was, which on a tight limit left the video
+    /// nothing and put the result over the size the user asked for.
+    /// </summary>
+    private static readonly int[] AudioLadder = [128, 96, 64, 48];
+
+    /// <summary>Below this the video stops being worth watching at all.</summary>
+    private const int MinimumVideoKbps = 100;
 
     public async Task<MediaInfo> InspectAsync(string path, CancellationToken cancellationToken)
     {
@@ -135,6 +145,7 @@ public sealed partial class MediaSession(ToolSet tools)
 
         var info = await InspectAsync(request.VideoPath, cancellationToken).ConfigureAwait(false);
         var filter = BuildSubtitleFilter(request);
+        var audioKbps = AudioBitrateKbps(request.SizeLimitBytes, info.Duration);
 
         List<string> arguments =
         [
@@ -142,12 +153,12 @@ public sealed partial class MediaSession(ToolSet tools)
             "-i", request.VideoPath,
             "-vf", filter,
             "-c:a", "aac",
-            "-b:a", $"{AudioBitrateKbps}k",
+            "-b:a", $"{audioKbps}k",
         ];
 
         if (request.SizeLimitBytes is > 0)
         {
-            var videoKbps = VideoBitrateKbps(request.SizeLimitBytes.Value, info.Duration);
+            var videoKbps = VideoBitrateKbps(request.SizeLimitBytes.Value, info.Duration, audioKbps);
             arguments.AddRange(["-c:v", "libx264", "-preset", "medium", "-b:v", $"{videoKbps}k", "-maxrate", $"{videoKbps}k", "-bufsize", $"{videoKbps * 2}k"]);
         }
         else
@@ -174,7 +185,8 @@ public sealed partial class MediaSession(ToolSet tools)
         }
 
         var info = await InspectAsync(request.VideoPath, cancellationToken).ConfigureAwait(false);
-        var videoKbps = VideoBitrateKbps(request.SizeLimitBytes, info.Duration);
+        var audioKbps = AudioBitrateKbps(request.SizeLimitBytes, info.Duration);
+        var videoKbps = VideoBitrateKbps(request.SizeLimitBytes, info.Duration, audioKbps);
 
         List<string> arguments =
         [
@@ -186,14 +198,14 @@ public sealed partial class MediaSession(ToolSet tools)
             "-maxrate", $"{videoKbps}k",
             "-bufsize", $"{videoKbps * 2}k",
             "-c:a", "aac",
-            "-b:a", $"{AudioBitrateKbps}k",
+            "-b:a", $"{audioKbps}k",
         ];
 
         // Resolution is only lowered when the target cannot be met at the
         // current one, which is what the tab's hint promises.
-        if (videoKbps < 500 && info.Height > 720)
+        if (TargetHeight(videoKbps, info.Height) is { } height)
         {
-            arguments.AddRange(["-vf", "scale=-2:720"]);
+            arguments.AddRange(["-vf", $"scale=-2:{height}"]);
         }
 
         arguments.Add(request.OutputPath);
@@ -237,6 +249,7 @@ public sealed partial class MediaSession(ToolSet tools)
                 Succeeded = true,
                 OutputPath = outputPath,
                 OutputBytes = bytes,
+                SizeLimitBytes = sizeLimit,
                 OvershotLimit = sizeLimit is > 0 && bytes > sizeLimit,
                 RawOutput = result.Output,
             };
@@ -275,18 +288,59 @@ public sealed partial class MediaSession(ToolSet tools)
         progress.Report(Math.Clamp(elapsed.TotalSeconds / duration.TotalSeconds * 100, 0, 100));
     }
 
-    private static int VideoBitrateKbps(long sizeLimitBytes, TimeSpan duration)
+    /// <summary>
+    /// The whole budget, in kbps, once 4% is set aside for container and muxing
+    /// overhead — so the result lands under the target rather than a whisker
+    /// over it.
+    /// </summary>
+    public static double TotalBudgetKbps(long sizeLimitBytes, TimeSpan duration) =>
+        duration <= TimeSpan.Zero ? 0 : sizeLimitBytes * 8 / duration.TotalSeconds / 1000 * 0.96;
+
+    /// <summary>
+    /// The best audio the budget can afford while still leaving the picture a
+    /// quarter of it. A long video under a small limit gets 48 kbps rather than
+    /// spending the entire budget on sound.
+    /// </summary>
+    public static int AudioBitrateKbps(long? sizeLimitBytes, TimeSpan duration)
+    {
+        if (sizeLimitBytes is not > 0)
+        {
+            return AudioLadder[0];
+        }
+
+        var affordable = TotalBudgetKbps(sizeLimitBytes.Value, duration) * 0.25;
+        return AudioLadder.FirstOrDefault(rate => rate <= affordable, AudioLadder[^1]);
+    }
+
+    public static int VideoBitrateKbps(long sizeLimitBytes, TimeSpan duration, int audioKbps)
     {
         if (duration <= TimeSpan.Zero)
         {
             return 1000;
         }
 
-        // 4% headroom for the container and muxing overhead, so the result lands
-        // under the target rather than a whisker over it.
-        var totalKbps = sizeLimitBytes * 8 / duration.TotalSeconds / 1000 * 0.96;
-        return Math.Max(200, (int)(totalKbps - AudioBitrateKbps));
+        return Math.Max(MinimumVideoKbps, (int)(TotalBudgetKbps(sizeLimitBytes, duration) - audioKbps));
     }
+
+    /// <summary>
+    /// The height to scale down to, or null to leave the picture alone. Below
+    /// roughly these bitrates a larger frame only spends the budget on blocking.
+    /// </summary>
+    public static int? TargetHeight(int videoKbps, int sourceHeight) => videoKbps switch
+    {
+        < 250 when sourceHeight > 480 => 480,
+        < 500 when sourceHeight > 720 => 720,
+        _ => null,
+    };
+
+    /// <summary>
+    /// The smallest this video can be made without going below what is still
+    /// watchable. A limit under this cannot be met, however the encode is run.
+    /// </summary>
+    public static long SmallestReachableBytes(TimeSpan duration) =>
+        duration <= TimeSpan.Zero
+            ? 0
+            : (long)((MinimumVideoKbps + AudioLadder[^1]) * 1000 / 8.0 * duration.TotalSeconds);
 
     /// <summary>
     /// The subtitles filter takes a path inside a quoted filter string, so
