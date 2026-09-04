@@ -79,12 +79,16 @@
                 <TextBlock Grid.Row="0" Grid.Column="0" Text="YouTube link"
                            Style="{StaticResource BodyText}" VerticalAlignment="Center" />
                 <TextBox Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,12"
+                         AutomationProperties.AutomationId="LinkBox"
+                         AutomationProperties.Name="YouTube link"
                          Text="{Binding Link, UpdateSourceTrigger=PropertyChanged, Delay=250}"
                          Tag="Paste a YouTube link" />
 
                 <TextBlock Grid.Row="1" Grid.Column="0" Text="Save to"
                            Style="{StaticResource BodyText}" VerticalAlignment="Center" />
                 <TextBox Grid.Row="1" Grid.Column="1" Margin="0,0,8,0"
+                         AutomationProperties.AutomationId="FolderBox"
+                         AutomationProperties.Name="Save to"
                          Text="{Binding OutputFolder, UpdateSourceTrigger=PropertyChanged}" />
                 <Button Grid.Row="1" Grid.Column="2" Content="Browse…"
                         Style="{StaticResource StandardButton}" Command="{Binding BrowseFolderCommand}" />
@@ -172,10 +176,23 @@
                     <TextBlock Grid.Row="0" Grid.Column="0" Text="Video quality"
                                Style="{StaticResource BodyText}" VerticalAlignment="Center" />
                     <StackPanel Grid.Row="0" Grid.Column="1">
-                        <ComboBox ItemsSource="{Binding Qualities}"
+                        <ComboBox AutomationProperties.AutomationId="QualityBox"
+                                  AutomationProperties.Name="Video quality"
+                                  ItemsSource="{Binding Qualities}"
                                   SelectedItem="{Binding SelectedQuality}"
                                   HorizontalAlignment="Left"
                                   MinWidth="260">
+                            <!--
+                                Named on the container, not inside the template:
+                                without this a screen reader is read the whole
+                                record — "QualityOption { Height = 1080, … }" —
+                                where "1080p" belongs.
+                            -->
+                            <ComboBox.ItemContainerStyle>
+                                <Style TargetType="ComboBoxItem">
+                                    <Setter Property="AutomationProperties.Name" Value="{Binding Label}" />
+                                </Style>
+                            </ComboBox.ItemContainerStyle>
                             <ComboBox.ItemTemplate>
                                 <DataTemplate>
                                     <Grid MinWidth="220">
@@ -252,6 +269,8 @@
                     <StackPanel Orientation="Horizontal"
                                 Visibility="{Binding IsBrowserCookies, Converter={StaticResource BoolToVisibility}}">
                         <ComboBox x:Name="BrowserChoice" Width="180" Margin="0,0,8,0"
+                                  AutomationProperties.AutomationId="BrowserBox"
+                                  AutomationProperties.Name="Where to read cookies from"
                                   SelectionChanged="BrowserChanged"
                                   SelectedIndex="0">
                             <ComboBoxItem Content="Firefox" />
@@ -318,7 +337,8 @@
 
                     <!-- headline -> detail -> bar -> figures -->
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="{Binding Progress.Headline}" Style="{StaticResource BodyLargeText}" />
+                        <TextBlock AutomationProperties.AutomationId="StateHeadline"
+                                   Text="{Binding Progress.Headline}" Style="{StaticResource BodyLargeText}" />
                         <Border Background="{DynamicResource SubtleSurfaceBrush}" CornerRadius="10"
                                 Padding="8,2" Margin="10,2,0,0" VerticalAlignment="Center"
                                 Visibility="{Binding Progress.Badge, Converter={StaticResource StringToVisibility}}">
@@ -416,6 +436,7 @@
     -->
     <Button Grid.Row="1"
             Content="Download video &amp; subtitles"
+            AutomationProperties.AutomationId="StartButton"
             Style="{StaticResource PrimaryButton}"
             HorizontalAlignment="Right"
             Margin="0,12,10,0"

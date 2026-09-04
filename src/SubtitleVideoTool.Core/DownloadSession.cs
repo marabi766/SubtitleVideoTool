@@ -76,26 +76,69 @@ public sealed partial class DownloadSession(ToolSet tools)
 
     private static readonly string[] VideoExtensions = [".mp4", ".mkv", ".webm", ".mov", ".m4v"];
 
+    /// <summary>
+    /// Asks YouTube what the video has. A bot check is answered the same way the
+    /// download answers it — by asking again as a different player client —
+    /// because otherwise the window dead-ends on a link the download itself
+    /// would have managed.
+    /// </summary>
     public async Task<VideoInfo> ProbeAsync(DownloadRequest request, CancellationToken cancellationToken)
     {
         var ytDlp = tools.PathOf(ToolSet.YtDlp)
             ?? throw new ProbeException("yt-dlp is not available, so the link cannot be checked.");
 
-        string json;
-        try
+        var lastOutput = string.Empty;
+
+        foreach (var playerClients in ProbeAttempts(request))
         {
-            json = await ToolProcess
-                .ReadAllAsync(ytDlp, YtDlpArguments.ForProbe(request, tools), cancellationToken)
-                .ConfigureAwait(false);
-        }
-        catch (ToolFailedException failure)
-        {
-            // Carry yt-dlp's own words so the caller can classify this exactly
-            // the way it classifies a failed download.
-            throw new ProbeFailedException(failure.Output);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            try
+            {
+                var json = await ToolProcess
+                    .ReadAllAsync(
+                        ytDlp,
+                        YtDlpArguments.ForProbe(request with { PlayerClients = playerClients }, tools),
+                        cancellationToken)
+                    .ConfigureAwait(false);
+
+                return VideoProbe.Parse(json);
+            }
+            catch (ToolFailedException failure)
+            {
+                lastOutput = failure.Output;
+
+                // Only the refusals another player client can get past are worth
+                // a second ask. A private video stays private however we ask.
+                if (DownloadFailure.Classify(failure.Output) is not (FailureKind.BotCheck or FailureKind.LoginRequired))
+                {
+                    throw new ProbeFailedException(failure.Output);
+                }
+            }
         }
 
-        return VideoProbe.Parse(json);
+        // Carry yt-dlp's own words so the caller can classify this exactly the
+        // way it classifies a failed download.
+        throw new ProbeFailedException(lastOutput);
+    }
+
+    /// <summary>
+    /// The default client first, then the alternatives — but only when nobody is
+    /// signed in, since a signed-in request is not the one YouTube bot-checks.
+    /// </summary>
+    private static IEnumerable<string?> ProbeAttempts(DownloadRequest request)
+    {
+        yield return null;
+
+        if (request.CookieSource != CookieSource.None)
+        {
+            yield break;
+        }
+
+        foreach (var clients in YtDlpArguments.FallbackPlayerClients)
+        {
+            yield return clients;
+        }
     }
 
     public async Task<DownloadOutcome> DownloadAsync(
@@ -185,6 +228,15 @@ public sealed partial class DownloadSession(ToolSet tools)
             if (result.Succeeded)
             {
                 return Complete(request, startedAt, tracker, result.Output);
+            }
+
+            // yt-dlp reports a non-zero exit for anything that went wrong,
+            // including a subtitle track it could not fetch after the video was
+            // already saved. The video is what was asked for, so if one landed
+            // this counts as done rather than as a failure that throws it away.
+            if (Complete(request, startedAt, tracker, result.Output) is { Succeeded: true } salvaged)
+            {
+                return salvaged;
             }
 
             var kind = DownloadFailure.Classify(result.Output);

@@ -26,6 +26,12 @@ public sealed record DownloadRequest
     public int? Height { get; init; }
 
     public bool DownloadEnglishSubtitles { get; init; } = true;
+
+    /// <summary>
+    /// The one track key the probe settled on, e.g. "en". Empty falls back to
+    /// <see cref="YtDlpArguments.SubtitleLanguages"/>.
+    /// </summary>
+    public string? SubtitleLanguage { get; init; }
     public CookieSource CookieSource { get; init; } = CookieSource.None;
     public string? CookieFilePath { get; init; }
     public string? SignInProfileFolder { get; init; }
@@ -49,10 +55,12 @@ public static class YtDlpArguments
     public const string OutputTemplate = "%(title).180B [%(id)s].%(ext)s";
 
     /// <summary>
-    /// English only. "en.*" also catches en-US and en-GB; auto-translated
-    /// tracks arrive as plain "en".
+    /// Used only when the probe could not name a track. Deliberately just "en":
+    /// the pattern "en.*" also matches YouTube's "English from Japanese"
+    /// round trips, and asking for those fetches a dozen near-identical files
+    /// and invites a rate limit that takes the video down with it.
     /// </summary>
-    public const string SubtitleLanguages = "en.*,en";
+    public const string SubtitleLanguages = "en";
 
     /// <summary>
     /// H.264 + AAC is tried first at capped heights so that
@@ -78,6 +86,7 @@ public static class YtDlpArguments
 
         AddJsRuntime(arguments, tools);
         AddCookies(arguments, request);
+        AddPlayerClients(arguments, request);
         arguments.Add(request.Url);
         return arguments;
     }
@@ -118,7 +127,7 @@ public static class YtDlpArguments
             [
                 "--write-subs",
                 "--write-auto-subs",
-                "--sub-langs", SubtitleLanguages,
+                "--sub-langs", SubtitleLanguageOf(request),
                 "--sub-format", "srt/best",
                 "--convert-subs", "srt",
             ]);
@@ -128,13 +137,24 @@ public static class YtDlpArguments
 
         AddCookies(arguments, request);
 
+        AddPlayerClients(arguments, request);
+
+        arguments.Add(request.Url);
+        return arguments;
+    }
+
+    /// <summary>The exact track the probe found, or "en" when it found none.</summary>
+    public static string SubtitleLanguageOf(DownloadRequest request) =>
+        string.IsNullOrWhiteSpace(request.SubtitleLanguage)
+            ? SubtitleLanguages
+            : request.SubtitleLanguage;
+
+    private static void AddPlayerClients(List<string> arguments, DownloadRequest request)
+    {
         if (!string.IsNullOrWhiteSpace(request.PlayerClients))
         {
             arguments.AddRange(["--extractor-args", "youtube:player_client=" + request.PlayerClients]);
         }
-
-        arguments.Add(request.Url);
-        return arguments;
     }
 
     private static void AddJsRuntime(List<string> arguments, ToolSet tools)

@@ -523,6 +523,7 @@ public sealed class DownloadViewModel : ObservableObject
         OutputFolder = OutputFolder.Trim(),
         Height = SelectedQuality is { Height: > 0 } quality ? quality.Height : null,
         DownloadEnglishSubtitles = DownloadSubtitles && Subtitle.IsAvailable,
+        SubtitleLanguage = Subtitle.LanguageCode,
         CookieSource = CookieSource,
         CookieFilePath = CookieFilePath,
         SignInProfileFolder = SignIn.ProfileFolder(),
