@@ -1,4 +1,3 @@
-using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows.Media;
 using SubtitleVideoTool.Core;
@@ -207,12 +206,7 @@ public sealed class BurnViewModel : MediaViewModelBase
     {
         fontCheck = new FontCheck(tools);
 
-        AllFonts = System.Windows.Media.Fonts.SystemFontFamilies
-            .Select(family => family.Source)
-            .Where(name => !string.IsNullOrWhiteSpace(name))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(name => name, StringComparer.CurrentCultureIgnoreCase)
-            .ToArray();
+        AllFonts = ReadInstalledFontFamilies();
 
         // Default to the preferred font when it is installed, so the common
         // case needs no choosing at all.
@@ -263,11 +257,32 @@ public sealed class BurnViewModel : MediaViewModelBase
         }
     }
 
-    /// <summary>Every font family installed, as DirectWrite names them.</summary>
+    /// <summary>Every font family installed, by its registered family name.</summary>
     public IReadOnlyList<string> AllFonts { get; }
 
     /// <summary>The filtered view the dropdown binds to.</summary>
-    public ObservableCollection<string> Fonts { get; } = [];
+    public BulkObservableCollection<string> Fonts { get; } = [];
+
+    /// <summary>
+    /// WPF's own <see cref="System.Windows.Media.Fonts.SystemFontFamilies"/>
+    /// groups families by DirectWrite's typographic weight, which collapses a
+    /// font shipped as several same-family, differently-weighted files — e.g.
+    /// "Peyda Black", "Peyda Bold", "Peyda Thin" — down to a single "Peyda"
+    /// entry and hides the rest entirely. GDI+'s font collection instead
+    /// reports each family exactly as it is registered, which is also how
+    /// FFmpeg's own font matching sees them, so a name found here is one
+    /// FFmpeg can actually be asked for.
+    /// </summary>
+    private static string[] ReadInstalledFontFamilies()
+    {
+        using var installed = new System.Drawing.Text.InstalledFontCollection();
+        return installed.Families
+            .Select(family => family.Name)
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(name => name, StringComparer.CurrentCultureIgnoreCase)
+            .ToArray();
+    }
 
     public string FontName
     {
@@ -342,14 +357,13 @@ public sealed class BurnViewModel : MediaViewModelBase
         var shown = found ? matches : AllFonts;
 
         // Rewriting an identical list would reset the ComboBox's editable text
-        // for nothing, so an unchanged result is left alone.
+        // for nothing, so an unchanged result is left alone. When it does
+        // change, it changes in one notification rather than one per item —
+        // with ~1800 installed families, Clear()+Add() in a loop made every
+        // keystroke visibly stall the dropdown.
         if (!Fonts.SequenceEqual(shown, StringComparer.Ordinal))
         {
-            Fonts.Clear();
-            foreach (var name in shown)
-            {
-                Fonts.Add(name);
-            }
+            Fonts.ReplaceAll(shown);
         }
 
         if (hasFontMatches != found)

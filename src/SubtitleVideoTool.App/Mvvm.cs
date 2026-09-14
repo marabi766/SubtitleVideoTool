@@ -1,9 +1,34 @@
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
 
 namespace SubtitleVideoTool.App;
+
+/// <summary>
+/// An <see cref="ObservableCollection{T}"/> that can swap its entire contents
+/// for one change notification instead of one per item removed and added.
+/// Rebuilding a list of a couple thousand entries through Clear()+Add() on
+/// every keystroke of a search box makes the bound control redo its layout
+/// that many times per keystroke, which is visible as the UI stalling.
+/// </summary>
+public sealed class BulkObservableCollection<T> : ObservableCollection<T>
+{
+    public void ReplaceAll(IEnumerable<T> items)
+    {
+        Items.Clear();
+        foreach (var item in items)
+        {
+            Items.Add(item);
+        }
+
+        OnPropertyChanged(new PropertyChangedEventArgs(nameof(Count)));
+        OnPropertyChanged(new PropertyChangedEventArgs("Item[]"));
+        OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+    }
+}
 
 public abstract class ObservableObject : INotifyPropertyChanged
 {

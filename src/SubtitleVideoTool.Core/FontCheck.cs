@@ -85,7 +85,14 @@ public sealed partial class FontCheck(ToolSet tools)
                 onRawLine: line => report.AppendLine(line),
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
-            var match = FontSelectPattern().Matches(report.ToString()).LastOrDefault();
+            // The first fontselect line for a run is libass resolving the
+            // requested family against the actual subtitle text. Any line
+            // after it is libass patching a single missing glyph in that same
+            // family — most commonly a plain space, which many display fonts
+            // (Peyda included) simply don't ship — and always resolves to a
+            // fallback. Taking the last line instead of the first read that
+            // harmless per-glyph patch as the family itself having failed.
+            var match = FontSelectPattern().Matches(report.ToString()).FirstOrDefault();
             if (match is null)
             {
                 return verdict;
