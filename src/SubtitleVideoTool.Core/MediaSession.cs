@@ -343,6 +343,12 @@ public sealed partial class MediaSession(ToolSet tools)
             : (long)((MinimumVideoKbps + AudioLadder[^1]) * 1000 / 8.0 * duration.TotalSeconds);
 
     /// <summary>
+    /// ASS alpha runs backwards from ordinary transparency — &amp;H00 is
+    /// opaque and &amp;HFF is invisible — so this is roughly 70% opaque.
+    /// </summary>
+    private const byte BoxFillAlpha = 0x4D;
+
+    /// <summary>
     /// The subtitles filter takes a path inside a quoted filter string, so
     /// backslashes, colons and quotes all have to be escaped or the filter is
     /// silently mis-parsed.
@@ -356,8 +362,19 @@ public sealed partial class MediaSession(ToolSet tools)
             $"FontName={request.FontName}," +
             $"FontSize={request.FontSize}," +
             $"PrimaryColour={AssColour(request.TextColour)}," +
+            // BorderStyle=3's box is stroked per glyph cluster rather than
+            // drawn once for the whole line, and for some fonts — Peyda
+            // included — adjacent clusters don't fully join, leaving the box
+            // visibly gapped between letters and words. BorderStyle=4 draws
+            // one box for the line and has no such gap; BackColour is its
+            // fill, so that is where the chosen background colour goes, with
+            // a little transparency so it reads as a subtitle box rather
+            // than a solid card. OutlineColour is the same colour at full
+            // opacity, so the thin 1px border it also draws stays a crisp
+            // edge instead of a visible seam.
+            $"BackColour={AssColour(request.BackgroundColour, BoxFillAlpha)}," +
             $"OutlineColour={AssColour(request.BackgroundColour)}," +
-            "BorderStyle=3,Outline=1,Shadow=0";
+            "BorderStyle=4,Outline=1,Shadow=0";
 
         return $"subtitles='{path}':force_style='{style}'";
     }
@@ -365,6 +382,10 @@ public sealed partial class MediaSession(ToolSet tools)
     /// <summary>ASS wants &amp;HBBGGRR, the reverse of the usual RRGGBB.</summary>
     private static string AssColour((byte R, byte G, byte B) colour) =>
         $"&H{colour.B:X2}{colour.G:X2}{colour.R:X2}";
+
+    /// <summary>ASS wants &amp;HAABBGGRR when the colour carries transparency.</summary>
+    private static string AssColour((byte R, byte G, byte B) colour, byte alpha) =>
+        $"&H{alpha:X2}{colour.B:X2}{colour.G:X2}{colour.R:X2}";
 
     private static MediaOutcome Unavailable() => new()
     {
