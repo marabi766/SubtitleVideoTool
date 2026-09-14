@@ -33,6 +33,9 @@ cookies*.txt
 *.ytdl
 *.f???.*
 
+# --- Local tooling state ---
+/.claude/
+
 # --- Temporary / scratch ---
 /tmp/
 /temp/

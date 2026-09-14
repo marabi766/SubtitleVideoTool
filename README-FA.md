@@ -1,4 +1,4 @@
-# Subtitle & Video Compressor — نسخهٔ ۲.۱.۰
+# Subtitle & Video Compressor — نسخهٔ ۲.۱.۱
 
 برنامهٔ ویندوزی برای دانلود ویدیو و زیرنویس از یوتیوب، چسباندن دائمی زیرنویس با استایل دلخواه، و فشرده‌سازی هوشمند ویدیو تا حجم هدف.
 
@@ -8,7 +8,7 @@
 
 ## نصب
 
-فایل `SubtitleVideoTool-2.1.0.msi` را اجرا کنید. نصب روی کل سیستم انجام می‌شود، پس ویندوز یک بار دسترسی Administrator می‌خواهد.
+فایل `SubtitleVideoTool-2.1.1.msi` را اجرا کنید. نصب روی کل سیستم انجام می‌شود، پس ویندوز یک بار دسترسی Administrator می‌خواهد.
 
 پس از نصب:
 
@@ -124,7 +124,7 @@ dotnet test tests/SubtitleVideoTool.Core.Tests/SubtitleVideoTool.Core.Tests.cspr
 powershell -ExecutionPolicy Bypass -File Build-Msi.ps1
 ```
 
-خروجی در `build\SubtitleVideoTool-2.1.0.msi` ساخته می‌شود.
+خروجی در `build\SubtitleVideoTool-2.1.1.msi` ساخته می‌شود.
 
 ### ساختار پروژه
 
