@@ -88,6 +88,15 @@ public sealed record VideoInfo
     public IReadOnlyList<QualityOption> Qualities { get; init; } = [];
     public EnglishSubtitle Subtitle { get; init; } = new();
 
+    /// <summary>
+    /// True when the probe only got an answer from the last-resort player
+    /// client, which YouTube answers even under a bot check but only with a
+    /// small VR-oriented format set capped at 360p. That is a real answer,
+    /// not a failure — but without this flag it reads as the video itself
+    /// topping out at 360p, which it usually does not.
+    /// </summary>
+    public bool QualityLimitedByFallback { get; init; }
+
     /// <summary>"3:33 · 8 qualities available", the design's summary line.</summary>
     public string DurationText => Duration is { } d
         ? d.TotalHours >= 1

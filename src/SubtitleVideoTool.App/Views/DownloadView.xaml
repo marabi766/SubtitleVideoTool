@@ -211,6 +211,11 @@
                         <TextBlock Style="{StaticResource CaptionText}" Margin="0,6,0,0"
                                    Text="Above 1080p this video only exists in a newer format. It downloads fine, but some older players won't open it."
                                    Visibility="{Binding ShowCodecNote, Converter={StaticResource BoolToVisibility}}" />
+                        <TextBlock Style="{StaticResource CaptionText}" Margin="0,6,0,0"
+                                   Foreground="{DynamicResource CautionBrush}"
+                                   TextWrapping="Wrap"
+                                   Text="YouTube turned down the normal request; this list is from the one fallback that still answers anonymously, and it only goes up to 360p. Sign in under YouTube access below for the real quality list."
+                                   Visibility="{Binding ShowQualityLimitedNote, Converter={StaticResource BoolToVisibility}}" />
                     </StackPanel>
 
                     <!-- English subtitles: one checkbox, one line of provenance. -->

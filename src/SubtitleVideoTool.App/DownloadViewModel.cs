@@ -146,7 +146,9 @@ public sealed class DownloadViewModel : ObservableObject
                 return;
             }
 
-            RaiseAll(nameof(IsAnonymous), nameof(IsAppSignIn), nameof(IsBrowserCookies), nameof(NeedsCookieFile));
+            RaiseAll(
+                nameof(IsAnonymous), nameof(IsAppSignIn), nameof(IsBrowserCookies), nameof(NeedsCookieFile),
+                nameof(ShowQualityLimitedNote));
             StartCommand.RaiseCanExecuteChanged();
         }
     }
@@ -214,7 +216,7 @@ public sealed class DownloadViewModel : ObservableObject
         {
             if (Set(ref video, value))
             {
-                RaiseAll(nameof(VideoSummary), nameof(Subtitle), nameof(HasSubtitle));
+                RaiseAll(nameof(VideoSummary), nameof(Subtitle), nameof(HasSubtitle), nameof(ShowQualityLimitedNote));
             }
         }
     }
@@ -227,6 +229,14 @@ public sealed class DownloadViewModel : ObservableObject
     public string VideoSummary => Video is null
         ? string.Empty
         : $"{Video.DurationText} · {Video.Qualities.Count} qualities available · checked just now";
+
+    /// <summary>
+    /// True when YouTube bot-checked every normal request and the answer came
+    /// from the one fallback client that gets through anonymously — which
+    /// only offers up to 360p. Without this, that ceiling reads as the
+    /// video's own, not the anonymous connection's.
+    /// </summary>
+    public bool ShowQualityLimitedNote => Video is { QualityLimitedByFallback: true } && IsAnonymous;
 
     public FailureDescription? ProbeFailure
     {

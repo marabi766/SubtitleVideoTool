@@ -102,7 +102,10 @@ public sealed partial class DownloadSession(ToolSet tools)
                         cancellationToken)
                     .ConfigureAwait(false);
 
-                return VideoProbe.Parse(json);
+                return VideoProbe.Parse(json) with
+                {
+                    QualityLimitedByFallback = playerClients == YtDlpArguments.QualityLimitedPlayerClients,
+                };
             }
             catch (ToolFailedException failure)
             {
