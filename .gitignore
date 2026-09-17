@@ -7,6 +7,12 @@
 # Verified with CHECKSUMS-SHA256.txt, not stored in Git.
 /tools/*.exe
 
+# --- PO-token provider's npm dependency tree ---
+# Restored by `npm install --omit=dev` (Build-Msi.ps1 does this); its own
+# integrity is verified via package-lock.json's per-package hashes, so it
+# does not need an entry in CHECKSUMS-SHA256.txt.
+/tools/pot-provider/server/node_modules/
+
 # --- Secrets / private session data (never commit) ---
 cookies.txt
 cookies*.txt

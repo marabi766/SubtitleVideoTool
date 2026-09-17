@@ -39,7 +39,17 @@
 
     <StandardDirectory Id="ProgramFiles64Folder">
       <Directory Id="INSTALLFOLDER" Name="Subtitle &amp; Video Compressor">
-        <Directory Id="TOOLSFOLDER" Name="tools" />
+        <Directory Id="TOOLSFOLDER" Name="tools">
+          <!--
+            Named explicitly rather than left to Files' harvesting: harvesting
+            computes each destination relative to the directory right before
+            its "**", so a glob rooted at tools\yt-dlp-plugins\ (or
+            tools\pot-provider\) drops that folder name from the install path
+            unless it is named again here.
+          -->
+          <Directory Id="PLUGINSFOLDER" Name="yt-dlp-plugins" />
+          <Directory Id="POTPROVIDERFOLDER" Name="pot-provider" />
+        </Directory>
       </Directory>
     </StandardDirectory>
 
@@ -52,6 +62,8 @@
     <Feature Id="Main" Title="Subtitle &amp; Video Compressor" Level="1" AllowAbsent="no">
       <ComponentGroupRef Id="AppFiles" />
       <ComponentGroupRef Id="ToolFiles" />
+      <ComponentGroupRef Id="PotProviderPluginFiles" />
+      <ComponentGroupRef Id="PotProviderServerFiles" />
       <ComponentRef Id="StartMenuShortcut" />
     </Feature>
 
@@ -75,6 +87,20 @@
     -->
     <ComponentGroup Id="ToolFiles" Directory="TOOLSFOLDER">
       <Files Include="$(SourceRoot)\tools\*.exe" />
+    </ComponentGroup>
+
+    <!--
+      The PO-token provider yt-dlp needs to get full-quality formats out of a
+      signed-in request: a small yt-dlp plugin, plus the script and its npm
+      dependency tree (populated by a production-only npm install; see
+      Build-Msi.ps1) that the plugin runs through the bundled Deno above.
+    -->
+    <ComponentGroup Id="PotProviderPluginFiles" Directory="PLUGINSFOLDER">
+      <Files Include="$(SourceRoot)\tools\yt-dlp-plugins\**" />
+    </ComponentGroup>
+
+    <ComponentGroup Id="PotProviderServerFiles" Directory="POTPROVIDERFOLDER">
+      <Files Include="$(SourceRoot)\tools\pot-provider\**" />
     </ComponentGroup>
   </Fragment>
 

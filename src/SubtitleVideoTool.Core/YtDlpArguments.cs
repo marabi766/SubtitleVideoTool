@@ -52,6 +52,15 @@ public static class YtDlpArguments
         "android_vr,web_safari",
     ];
 
+    /// <summary>
+    /// The last resort in <see cref="FallbackPlayerClients"/>. YouTube answers
+    /// it even when every other client hit a bot check, but android_vr's own
+    /// format set is capped at 360p — a real answer, not a failure, but one
+    /// worth telling the user about rather than passing off as the video's
+    /// own ceiling.
+    /// </summary>
+    public const string QualityLimitedPlayerClients = "android_vr,web_safari";
+
     public const string OutputTemplate = "%(title).180B [%(id)s].%(ext)s";
 
     /// <summary>
@@ -85,6 +94,7 @@ public static class YtDlpArguments
         ];
 
         AddJsRuntime(arguments, tools);
+        AddPotProvider(arguments, tools);
         AddCookies(arguments, request);
         AddPlayerClients(arguments, request);
         arguments.Add(request.Url);
@@ -111,6 +121,7 @@ public static class YtDlpArguments
         }
 
         AddJsRuntime(arguments, tools);
+        AddPotProvider(arguments, tools);
 
         arguments.AddRange(
         [
@@ -154,6 +165,22 @@ public static class YtDlpArguments
         if (!string.IsNullOrWhiteSpace(request.PlayerClients))
         {
             arguments.AddRange(["--extractor-args", "youtube:player_client=" + request.PlayerClients]);
+        }
+    }
+
+    /// <summary>
+    /// YouTube now withholds the URL of any format that needs a "proof of
+    /// origin" token unless one is supplied — even for a signed-in request —
+    /// which otherwise leaves only a handful of very low resolutions. This
+    /// plugin gets one, via a bundled script the Deno runtime above already
+    /// satisfies the requirements for.
+    /// </summary>
+    private static void AddPotProvider(List<string> arguments, ToolSet tools)
+    {
+        var serverHome = Path.Combine(tools.AppRoot, "tools", "pot-provider", "server");
+        if (Directory.Exists(serverHome))
+        {
+            arguments.AddRange(["--extractor-args", "youtubepot-bgutilscript:server_home=" + serverHome]);
         }
     }
 
